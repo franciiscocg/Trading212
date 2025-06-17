@@ -71,6 +71,15 @@ export const authService = {
     api.get('/auth/status'),
 };
 
+// Servicios de Investment Advisor
+export const investmentAdvisorService = {
+  analyzeInvestments: (data) =>
+    api.post('/investment-advisor/analyze', data),
+  
+  getMarketData: (symbol) =>
+    api.get(`/investment-advisor/market-data/${symbol}`),
+};
+
 // Health check para verificar conectividad
 export const healthCheck = () => api.get('/health');
 

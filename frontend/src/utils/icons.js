@@ -17,7 +17,8 @@ import {
   HomeIcon,
   DocumentChartBarIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  LightBulbIcon
 } from '@heroicons/react/24/outline';
 
 // Exportar iconos con nombres consistentes
@@ -39,5 +40,6 @@ export {
   HomeIcon,
   DocumentChartBarIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  LightBulbIcon
 };

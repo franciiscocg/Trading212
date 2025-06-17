@@ -23,17 +23,18 @@ def create_app():
     
     # Configurar CORS
     CORS(app, origins=os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(','))
-    
-    # Registrar blueprints
+      # Registrar blueprints
     from app.routes.portfolio import portfolio_bp
     from app.routes.positions import positions_bp
     from app.routes.analytics import analytics_bp
     from app.routes.auth import auth_bp
+    from app.routes.investment_advisor import investment_advisor_bp
     
     app.register_blueprint(portfolio_bp, url_prefix='/api/portfolio')
     app.register_blueprint(positions_bp, url_prefix='/api/positions')
     app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(investment_advisor_bp, url_prefix='/api/investment-advisor')
     
     # Health check route
     @app.route('/api/health', methods=['GET'])

@@ -5,6 +5,7 @@ import {
   ChartBarIcon, 
   CogIcon, 
   DocumentChartBarIcon,
+  LightBulbIcon,
   Bars3Icon,
   XMarkIcon
 } from '../utils/icons';
@@ -13,6 +14,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: HomeIcon },
   { name: 'Portafolio', href: '/portfolio', icon: ChartBarIcon },
   { name: 'Analytics', href: '/analytics', icon: DocumentChartBarIcon },
+  { name: 'Investment Advisor', href: '/investment-advisor', icon: LightBulbIcon },
   { name: 'Configuración', href: '/settings', icon: CogIcon },
 ];
 
