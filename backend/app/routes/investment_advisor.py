@@ -146,6 +146,29 @@ CONTEXTO ACTUAL DEL MERCADO (Junio 2025):
 - Geopolítica: Tensiones comerciales y sus efectos en los mercados
 - Valuaciones: Analiza si los mercados están sobrevalorados o infravalorados
 
+IMPORTANTE - INSTRUMENTOS DISPONIBLES EN TRADING212 INVEST:
+Recomienda ÚNICAMENTE instrumentos que estén disponibles en Trading212 Invest. Los tipos de instrumentos disponibles incluyen:
+
+1. ACCIONES INDIVIDUALES (formato: TICKER):
+   - Acciones europeas: ASML, SAP, LVMH, NESN, INGA, etc.
+   - Acciones estadounidenses: AAPL, MSFT, GOOGL, AMZN, TSLA, NVDA, META, etc.
+   - Acciones del Reino Unido: BP, SHEL, AZN, ULVR, etc.
+
+2. ETFs DISPONIBLES EN TRADING212 (formato: TICKER):
+   - ETFs de Vanguard: VWCE (Vanguard FTSE All-World), VUSA (S&P 500), etc.
+   - ETFs de iShares: IWDA (MSCI World), EIMI (Emerging Markets), etc.
+   - ETFs de SPDR: SPY5 (S&P 500), etc.
+   - ETFs sectoriales: TEC0 (Tecnología), HEAL (Salud), etc.
+
+3. INSTRUMENTOS ESPECÍFICOS REALES:
+   - VWCE.DE: Vanguard FTSE All-World UCITS ETF (Diversificación global)
+   - IWDA.AS: iShares Core MSCI World UCITS ETF (Mercados desarrollados)
+   - EIMI.AS: iShares Core MSCI Emerging Markets IMI UCITS ETF
+   - VUSA.AS: Vanguard S&P 500 UCITS ETF
+   - TEC0.DE: Xtrackers MSCI World Information Technology UCITS ETF
+
+NO recomiendes instrumentos ficticios o que no existan realmente en Trading212.
+
 {portfolio_summary}
 
 PERFIL DEL INVERSOR:
@@ -176,32 +199,33 @@ METODOLOGÍA DE ANÁLISIS:
    - Considera diversificación sectorial y geográfica
    - Establece cronograma de implementación
 
-CRÍTICO: Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, markdown o comentarios. La respuesta debe ser JSON puro que pueda ser parseado directamente. Estructura requerida:
+CRÍTICO: Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, markdown o comentarios. La respuesta debe ser JSON puro que pueda ser parseado directamente. Usa SOLO tickers reales disponibles en Trading212 Invest. Estructura requerida:
 
 {{
   "topRecommendation": {{
-    "symbol": "TICKER",
-    "name": "Nombre de la empresa/ETF"
+    "symbol": "VWCE.DE",
+    "name": "Vanguard FTSE All-World UCITS ETF"
   }},
   "expectedReturn": 0.12,
   "overallRisk": "MEDIUM",
   "recommendations": [
     {{
-      "symbol": "TICKER1",
-      "name": "Nombre completo",
-      "currentPrice": 100.50,
-      "targetPrice": 120.00,
-      "stopLoss": 85.00,
-      "potentialReturn": 0.194,
+      "symbol": "MSFT",
+      "name": "Microsoft Corporation",
+      "currentPrice": 340.50,
+      "targetPrice": 400.00,
+      "stopLoss": 300.00,
+      "potentialReturn": 0.175,
       "risk": "MEDIUM",
       "strategy": "Comprar y mantener por 12-18 meses",
-      "reasoning": "Razón detallada para la inversión",
+      "reasoning": "Líder en cloud computing y AI con sólidos fundamentos financieros",
       "timeHorizon": "12-18 meses",
       "keyMetrics": {{
-        "P/E": "15.2",
-        "ROE": "18%",
-        "Debt/Equity": "0.3"
-      }}
+        "P/E": "28.5",
+        "ROE": "45%",
+        "MarketCap": "2.5T USD"
+      }},
+      "tradingInstructions": "Disponible en Trading212 como MSFT. Considera DCA (Dollar Cost Averaging) para reducir volatilidad."
     }}
   ],
   "riskAnalysis": {{
@@ -209,7 +233,7 @@ CRÍTICO: Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, 
     "maxDrawdown": 0.25,
     "sharpeRatio": 1.2
   }},
-  "marketInsights": "Análisis del mercado actual y cómo afecta a las recomendaciones..."
+  "marketInsights": "Análisis del mercado actual y cómo afecta a las recomendaciones disponibles en Trading212..."
 }}
 
 Fecha actual: {datetime.now().strftime('%Y-%m-%d')}
@@ -280,8 +304,7 @@ def create_fallback_analysis(preferences):
     """Crear análisis de fallback cuando Gemini no está disponible"""
     risk_level = preferences.get('riskTolerance', 'medium').upper()
     investment_amount = preferences.get('investmentAmount', 1000)
-    
-    # Recomendaciones básicas basadas en el perfil de riesgo
+      # Recomendaciones básicas basadas en el perfil de riesgo
     if risk_level == 'LOW':
         recommendations = [
             {
@@ -292,54 +315,57 @@ def create_fallback_analysis(preferences):
                 "stopLoss": 95.0,
                 "potentialReturn": 0.136,
                 "risk": "LOW",
-                "strategy": "Inversión a largo plazo en mercados globales",
-                "reasoning": "ETF diversificado que replica el mercado mundial",
+                "strategy": "Inversión a largo plazo en mercados globales diversificados",
+                "reasoning": "ETF que replica el índice FTSE All-World, proporcionando exposición diversificada a mercados desarrollados y emergentes con costos bajos",
                 "timeHorizon": "3-5 años",
                 "keyMetrics": {
                     "TER": "0.22%",
-                    "AUM": "€15B",
-                    "Yield": "2.1%"
-                }
+                    "AUM": "€15B+",
+                    "Dividend Yield": "2.1%"
+                },
+                "tradingInstructions": "Disponible en Trading212 como VWCE.DE. Ideal para DCA mensual."
             }
         ]
     elif risk_level == 'HIGH':
         recommendations = [
             {
-                "symbol": "TSLA",
-                "name": "Tesla Inc.",
-                "currentPrice": 250.0,
-                "targetPrice": 320.0,
-                "stopLoss": 200.0,
-                "potentialReturn": 0.28,
+                "symbol": "NVDA",
+                "name": "NVIDIA Corporation",
+                "currentPrice": 950.0,
+                "targetPrice": 1200.0,
+                "stopLoss": 750.0,
+                "potentialReturn": 0.26,
                 "risk": "HIGH",
-                "strategy": "Crecimiento en vehículos eléctricos",
-                "reasoning": "Líder en EVs con potencial de crecimiento",
+                "strategy": "Crecimiento agresivo en inteligencia artificial",
+                "reasoning": "Líder absoluto en semiconductores para IA, con demanda exponencial en centros de datos y aplicaciones de machine learning",
                 "timeHorizon": "1-2 años",
                 "keyMetrics": {
                     "P/E": "65.2",
-                    "Growth": "25%",
-                    "Beta": "2.1"
-                }
+                    "Revenue Growth": "126%",
+                    "Market Cap": "2.3T USD"
+                },
+                "tradingInstructions": "Disponible en Trading212 como NVDA. Considera volatilidad alta y position sizing adecuado."
             }
         ]
     else:  # MEDIUM
         recommendations = [
             {
-                "symbol": "MSFT",
-                "name": "Microsoft Corporation",
-                "currentPrice": 340.0,
-                "targetPrice": 400.0,
-                "stopLoss": 300.0,
+                "symbol": "IWDA.AS",
+                "name": "iShares Core MSCI World UCITS ETF",
+                "currentPrice": 85.0,
+                "targetPrice": 100.0,
+                "stopLoss": 75.0,
                 "potentialReturn": 0.176,
                 "risk": "MEDIUM",
-                "strategy": "Crecimiento estable en cloud computing",
-                "reasoning": "Empresa sólida con crecimiento en Azure y AI",
+                "strategy": "Diversificación global en mercados desarrollados",
+                "reasoning": "ETF que replica el MSCI World Index, proporcionando exposición a empresas de gran y mediana capitalización en mercados desarrollados",
                 "timeHorizon": "1-3 años",
                 "keyMetrics": {
-                    "P/E": "28.5",
-                    "ROE": "45%",
-                    "Dividend": "2.8%"
-                }
+                    "TER": "0.20%",
+                    "AUM": "€60B+",
+                    "Companies": "1,500+"
+                },
+                "tradingInstructions": "Disponible en Trading212 como IWDA.AS. Excelente opción core para portfolios diversificados."
             }
         ]
     
@@ -353,7 +379,7 @@ def create_fallback_analysis(preferences):
             "maxDrawdown": 0.10 if risk_level == 'LOW' else 0.35 if risk_level == 'HIGH' else 0.20,
             "sharpeRatio": 1.5 if risk_level == 'LOW' else 0.8 if risk_level == 'HIGH' else 1.2
         },
-        "marketInsights": f"Basado en tu perfil de riesgo {risk_level.lower()} y cantidad de inversión de €{investment_amount}, estas recomendaciones están diseñadas para maximizar el retorno ajustado al riesgo.",
+        "marketInsights": f"Basado en tu perfil de riesgo {risk_level.lower()} y cantidad de inversión de €{investment_amount}, estas recomendaciones están diseñadas para maximizar el retorno ajustado al riesgo. Todos los instrumentos están disponibles en Trading212 Invest y pueden ser comprados directamente desde la plataforma.",
         "timestamp": datetime.now().isoformat(),
         "source": "fallback_analysis"
     }
