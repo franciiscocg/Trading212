@@ -2,9 +2,9 @@ from flask import Blueprint, request, jsonify
 import logging
 import json
 import os
-import requests
 from datetime import datetime
 from app.models import Portfolio, Position, db
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 investment_advisor_bp = Blueprint('investment_advisor', __name__)
@@ -14,38 +14,65 @@ def get_gemini_api_key():
     return os.getenv('GEMINI_API_KEY')
 
 def call_gemini_api(prompt):
-    """Llamar a la API de Gemini con el prompt dado"""
+    """Llamar a la API de Gemini 2.5 Pro usando la nueva librería google-genai con streaming"""
     api_key = get_gemini_api_key()
     if not api_key:
         raise Exception("GEMINI_API_KEY no está configurada")
-      # URL de la API de Gemini (actualizada para usar gemini-1.5-flash)
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-    
-    headers = {
-        'Content-Type': 'application/json',
-    }
-    
-    data = {
-        "contents": [{
-            "parts": [{
-                "text": prompt
-            }]
-        }]
-    }
     
     try:
-        response = requests.post(url, headers=headers, json=data, timeout=30)
-        response.raise_for_status()
+        # Configurar cliente de Gemini
+        genai.configure(api_key=api_key)
+          # Configurar el modelo con thinking y respuesta estructurada
+        model = genai.GenerativeModel(
+            model_name="gemini-2.0-flash-thinking-exp",  # Usando el modelo más avanzado disponible
+            generation_config={
+                "response_mime_type": "application/json",
+                "temperature": 0.7,
+                "top_p": 0.9,
+            }
+        )
         
-        result = response.json()
-        if 'candidates' in result and len(result['candidates']) > 0:
-            content = result['candidates'][0]['content']['parts'][0]['text']
-            return content
-        else:
+        logger.info("Iniciando análisis con Gemini 2.0 Flash Thinking Exp")
+        logger.info(f"Prompt length: {len(prompt)} caracteres")
+        
+        # Generar contenido usando streaming para mejor rendimiento
+        response_chunks = []
+        
+        for chunk in model.generate_content(prompt, stream=True):
+            if chunk.text:
+                response_chunks.append(chunk.text)
+        
+        # Combinar todos los chunks en una respuesta completa
+        full_response = ''.join(response_chunks)
+        
+        if not full_response.strip():
             raise Exception("No se recibió respuesta válida de Gemini")
             
-    except requests.exceptions.RequestException as e:
+        logger.info(f"Respuesta recibida de Gemini: {len(full_response)} caracteres")
+        return full_response
+        
+    except Exception as e:
         logger.error(f"Error calling Gemini API: {e}")
+        
+        # Fallback a modelos alternativos si el principal falla
+        try:
+            logger.info("Intentando fallback con gemini-2.5-pro")
+            model_fallback = genai.GenerativeModel(
+                model_name="gemini-2.5-pro",
+                generation_config={
+                    "response_mime_type": "application/json",
+                    "temperature": 0.7,
+                }
+            )
+            
+            response = model_fallback.generate_content(prompt)
+            if response and response.text:
+                logger.info("Fallback exitoso con gemini-2.5-pro")
+                return response.text
+                
+        except Exception as fallback_error:
+            logger.error(f"Fallback también falló: {fallback_error}")
+        
         raise Exception(f"Error comunicándose con Gemini API: {str(e)}")
 
 def get_portfolio_summary(user_id):
@@ -74,10 +101,10 @@ def get_portfolio_summary(user_id):
     }
 
 def create_investment_prompt(portfolio_data, preferences, market_conditions):
-    """Crear el prompt para Gemini basado en los datos del portafolio y preferencias"""
+    """Crear el prompt para Gemini 2.5 Pro basado en los datos del portafolio y preferencias"""
     
     portfolio_summary = ""
-    if portfolio_data and 'portfolio' in portfolio_data:
+    if portfolio_data and portfolio_data.get('portfolio') and portfolio_data['portfolio'] is not None:
         p = portfolio_data['portfolio']
         portfolio_summary = f"""
 Portafolio Actual:
@@ -95,37 +122,62 @@ Métricas del Portafolio:
 - Tasa de Éxito: {a.get('win_rate', 0):.2f}%
 - Concentración (HHI): {a.get('concentration_index', 0):.0f}
 """
+    else:
+        portfolio_summary = """
+Portafolio Actual:
+- Nuevo inversor sin portafolio existente
+- Buscando realizar primera inversión
+"""
 
     prompt = f"""
-Eres un asesor financiero experto especializado en inversiones. Basándote en la siguiente información, proporciona recomendaciones de inversión detalladas y específicas.
+Eres un asesor financiero experto con capacidades de razonamiento avanzado. Utiliza las capacidades de thinking de Gemini 2.5 Pro para analizar profundamente cada aspecto antes de generar recomendaciones.
+
+PROCESO DE ANÁLISIS REQUERIDO:
+1. PIENSA PASO A PASO sobre el contexto macroeconómico actual
+2. ANALIZA DETALLADAMENTE el portafolio existente y su composición
+3. EVALÚA CUIDADOSAMENTE las preferencias y restricciones del inversor
+4. CONSIDERA MÚLTIPLES ESCENARIOS de mercado
+5. FUNDAMENTA CADA RECOMENDACIÓN con análisis cuantitativo y cualitativo
+
+CONTEXTO ACTUAL DEL MERCADO (Junio 2025):
+- Entorno macroeconómico: Considera inflación, tasas de interés, política monetaria
+- Revolución de la IA: Impacto en valoraciones y oportunidades sectoriales
+- Transición energética: Oportunidades en renovables y sostenibilidad
+- Geopolítica: Tensiones comerciales y sus efectos en los mercados
+- Valuaciones: Analiza si los mercados están sobrevalorados o infravalorados
 
 {portfolio_summary}
 
-Preferencias del Inversor:
+PERFIL DEL INVERSOR:
 - Tolerancia al Riesgo: {preferences.get('riskTolerance', 'medium')}
 - Horizonte de Inversión: {preferences.get('investmentHorizon', '1-3-years')}
 - Cantidad a Invertir: €{preferences.get('investmentAmount', 1000)}
+- Sectores Preferidos: {preferences.get('sectors', ['diversificado'])}
+- Enfoque Sostenible: {preferences.get('sustainability', False)}
 
-Instrucciones:
-1. Proporciona 3-5 recomendaciones específicas de inversión (acciones, ETFs, o sectores)
-2. Para cada recomendación incluye:
-   - Símbolo del ticker (si aplica)
-   - Precio aproximado de entrada
-   - Precio objetivo
-   - Stop loss recomendado
-   - Horizonte temporal específico
-   - Nivel de riesgo (LOW/MEDIUM/HIGH)
-   - Razón fundamental para la inversión
-   - Métricas financieras clave (P/E, ROE, etc. si aplica)
+METODOLOGÍA DE ANÁLISIS:
+1. ANÁLISIS FUNDAMENTAL PROFUNDO:
+   - Evalúa métricas financieras (P/E, ROE, deuda, crecimiento)
+   - Analiza la posición competitiva y ventajas del negocio
+   - Considera catalistas específicos y riesgos potenciales
 
-3. Proporciona un análisis de riesgo general con:
-   - Volatilidad esperada
-   - Máxima pérdida potencial
-   - Diversificación recomendada
+2. ANÁLISIS TÉCNICO:
+   - Evalúa niveles de soporte y resistencia
+   - Analiza tendencias y momentum
+   - Identifica puntos de entrada y salida óptimos
 
-4. Incluye insights del mercado actual y cómo afectan las recomendaciones
+3. ANÁLISIS DE RIESGO CUANTITATIVO:
+   - Calcula volatilidad esperada y correlaciones
+   - Determina máximo drawdown potencial
+   - Evalúa ratio riesgo-retorno
 
-IMPORTANTE: Responde ÚNICAMENTE en formato JSON válido con la siguiente estructura:
+4. CONSTRUCCIÓN DE PORTAFOLIO:
+   - Optimiza la asignación de activos
+   - Considera diversificación sectorial y geográfica
+   - Establece cronograma de implementación
+
+CRÍTICO: Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, markdown o comentarios. La respuesta debe ser JSON puro que pueda ser parseado directamente. Estructura requerida:
+
 {{
   "topRecommendation": {{
     "symbol": "TICKER",
@@ -172,12 +224,12 @@ def analyze_investments():
         data = request.get_json()
         user_id = data.get('user_id', 'default')
         preferences = data.get('preferences', {})
-        
-        # Obtener datos del portafolio
+          # Obtener datos del portafolio
         portfolio_summary = get_portfolio_summary(user_id)
-          # Crear prompt para Gemini
+        
+        # Crear prompt para Gemini
         prompt = create_investment_prompt(
-            {'portfolio': portfolio_summary}, 
+            {'portfolio': portfolio_summary} if portfolio_summary else {'portfolio': None}, 
             preferences, 
             data.get('marketConditions', 'current')
         )

@@ -1,12 +1,10 @@
 @echo off
 echo 🚀 Iniciando Backend (Python/Flask)...
 
-
+cd backend
 
 :: Activar entorno virtual
-call venv\Scripts\activate.bat
-
-cd backend
+call ..\venv\Scripts\activate.bat
 
 :: Verificar que el archivo .env existe
 if not exist ".env" (
