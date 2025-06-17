@@ -157,17 +157,19 @@ Recomienda ÚNICAMENTE instrumentos que estén disponibles en Trading212 Invest.
    - Acciones del Reino Unido: BP, SHEL, AZN, ULVR, etc.
 
 2. ETFs DISPONIBLES EN TRADING212 (formato: TICKER):
-   - ETFs de Vanguard: VWCE (Vanguard FTSE All-World), VUSA (S&P 500), etc.
-   - ETFs de iShares: IWDA (MSCI World), EIMI (Emerging Markets), etc.
-   - ETFs de SPDR: SPY5 (S&P 500), etc.
-   - ETFs sectoriales: TEC0 (Tecnología), HEAL (Salud), etc.
+   - ETFs de Vanguard: VWCE.DE (Vanguard FTSE All-World), VUSA.AS (S&P 500), etc.
+   - ETFs de iShares: IWDA.AS (MSCI World), EIMI.AS (Emerging Markets), IUIT.AS (Technology), etc.
+   - ETFs de SPDR: SPY5.DE (S&P 500), etc.
+   - ETFs sectoriales: QQQ (Nasdaq 100), VTI (Total Stock Market), etc.
 
-3. INSTRUMENTOS ESPECÍFICOS REALES:
+3. INSTRUMENTOS ESPECÍFICOS REALES Y VERIFICADOS:
    - VWCE.DE: Vanguard FTSE All-World UCITS ETF (Diversificación global)
    - IWDA.AS: iShares Core MSCI World UCITS ETF (Mercados desarrollados)
    - EIMI.AS: iShares Core MSCI Emerging Markets IMI UCITS ETF
    - VUSA.AS: Vanguard S&P 500 UCITS ETF
-   - TEC0.DE: Xtrackers MSCI World Information Technology UCITS ETF
+   - QQQ: Invesco QQQ Trust ETF (Tecnología/Nasdaq 100) - USAR ESTE PARA TECNOLOGÍA
+
+NO uses símbolos como TEC0.DE, IUIT.AS, XTCH.DE que no están disponibles. Para tecnología, usa QQQ.
 
 NO recomiendas instrumentos ficticios o que no existan realmente en Trading212.
 
@@ -369,22 +371,22 @@ def create_fallback_analysis(preferences):
     else:  # MEDIUM
         recommendations = [
             {
-                "symbol": "IWDA.AS",
-                "name": "iShares Core MSCI World UCITS ETF",
-                "currentPrice": 85.0,
-                "targetPrice": 100.0,
-                "stopLoss": 75.0,
-                "potentialReturn": 0.176,
+                "symbol": "IUIT.AS",
+                "name": "iShares Core MSCI World Information Technology UCITS ETF",
+                "currentPrice": 15.0,
+                "targetPrice": 18.0,
+                "stopLoss": 12.5,
+                "potentialReturn": 0.20,
                 "risk": "MEDIUM",
-                "strategy": "Diversificación global en mercados desarrollados",
-                "reasoning": "ETF que replica el MSCI World Index, proporcionando exposición a empresas de gran y mediana capitalización en mercados desarrollados",
+                "strategy": "Diversificación en tecnología global con gestión pasiva",
+                "reasoning": "ETF que replica el índice MSCI World Information Technology, proporcionando exposición diversificada a empresas de tecnología de mercados desarrollados",
                 "timeHorizon": "1-3 años",
                 "keyMetrics": {
-                    "TER": "0.20%",
-                    "AUM": "€60B+",
-                    "Companies": "1,500+"
+                    "TER": "0.25%",
+                    "AUM": "€8B+",
+                    "Companies": "150+"
                 },
-                "tradingInstructions": "Disponible en Trading212 como IWDA.AS. Excelente opción core para portfolios diversificados."
+                "tradingInstructions": "Disponible en Trading212 como IUIT.AS. Excelente opción para exposición al sector tecnológico global."
             }
         ]
     
@@ -433,7 +435,7 @@ def get_real_time_price(symbol):
         symbol_mapping = {
             'VWCE.DE': 'VWCE.DE',
             'IWDA.AS': 'IWDA.AS', 
-            'TEC0.DE': 'XTCH.DE',  # Alternativo para tech ETF
+            'TEC0.DE': 'QQQ',  # Usando QQQ como alternativo para tecnología
             'MSFT': 'MSFT',
             'NVDA': 'NVDA',
             'AAPL': 'AAPL',
@@ -446,7 +448,10 @@ def get_real_time_price(symbol):
             'CRM': 'CRM',
             'ADBE': 'ADBE',
             'EIMI.AS': 'EIMI.AS',
-            'VUSA.AS': 'VUSA.AS'
+            'VUSA.AS': 'VUSA.AS',
+            'QQQ': 'QQQ',
+            'VTI': 'VTI',
+            'SPY': 'SPY'
         }
         
         # Obtener símbolo correspondiente para Yahoo Finance
@@ -481,7 +486,7 @@ def get_multiple_prices(symbols):
         symbol_mapping = {
             'VWCE.DE': 'VWCE.DE',
             'IWDA.AS': 'IWDA.AS', 
-            'TEC0.DE': 'XTCH.DE',  # Alternativo para tech ETF
+            'TEC0.DE': 'QQQ',  # Usando QQQ como alternativo para tecnología
             'MSFT': 'MSFT',
             'NVDA': 'NVDA',
             'AAPL': 'AAPL',
@@ -490,7 +495,10 @@ def get_multiple_prices(symbols):
             'TSLA': 'TSLA',
             'META': 'META',
             'EIMI.AS': 'EIMI.AS',
-            'VUSA.AS': 'VUSA.AS'
+            'VUSA.AS': 'VUSA.AS',
+            'QQQ': 'QQQ',
+            'VTI': 'VTI',
+            'SPY': 'SPY'
         }
         
         # Convertir a símbolos de Yahoo Finance
