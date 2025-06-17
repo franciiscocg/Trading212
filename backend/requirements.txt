@@ -1,0 +1,21 @@
+# Build tools - install first
+setuptools>=68.0.0
+wheel>=0.41.0
+pip>=23.0.0
+
+# Core dependencies
+flask==2.3.3
+flask-cors==4.0.0
+flask-sqlalchemy==3.0.5
+python-dotenv==1.0.0
+requests==2.31.0
+pandas==2.1.1
+numpy==1.24.3
+plotly==5.15.0
+yfinance==0.2.18
+schedule==1.2.0
+python-dateutil==2.8.2
+
+# Additional utilities
+gunicorn==21.2.0
+werkzeug==2.3.7
