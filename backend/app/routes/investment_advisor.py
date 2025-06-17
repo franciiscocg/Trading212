@@ -5,6 +5,8 @@ import os
 from datetime import datetime
 from app.models import Portfolio, Position, db
 import google.generativeai as genai
+import yfinance as yf
+import time
 
 logger = logging.getLogger(__name__)
 investment_advisor_bp = Blueprint('investment_advisor', __name__)
@@ -167,7 +169,7 @@ Recomienda ÚNICAMENTE instrumentos que estén disponibles en Trading212 Invest.
    - VUSA.AS: Vanguard S&P 500 UCITS ETF
    - TEC0.DE: Xtrackers MSCI World Information Technology UCITS ETF
 
-NO recomiendes instrumentos ficticios o que no existan realmente en Trading212.
+NO recomiendas instrumentos ficticios o que no existan realmente en Trading212.
 
 {portfolio_summary}
 
@@ -256,8 +258,7 @@ def analyze_investments():
             {'portfolio': portfolio_summary} if portfolio_summary else {'portfolio': None}, 
             preferences, 
             data.get('marketConditions', 'current')
-        )
-        # Llamar a Gemini API
+        )        # Llamar a Gemini API
         api_key = get_gemini_api_key()
         if api_key:
             logger.info("Calling Gemini API for investment analysis")
@@ -278,13 +279,31 @@ def analyze_investments():
                 for field in required_fields:
                     if field not in analysis_result:
                         raise ValueError(f"Missing required field: {field}")
+                
+                # Enriquecer recomendaciones con precios reales
+                if 'recommendations' in analysis_result:
+                    analysis_result['recommendations'] = enrich_recommendations_with_real_prices(
+                        analysis_result['recommendations']
+                    )
                         
             except Exception as gemini_error:
                 logger.warning(f"Gemini API failed, using fallback: {gemini_error}")
                 analysis_result = create_fallback_analysis(preferences)
+                
+                # Enriquecer fallback con precios reales también
+                if 'recommendations' in analysis_result:
+                    analysis_result['recommendations'] = enrich_recommendations_with_real_prices(
+                        analysis_result['recommendations']
+                    )
         else:
             logger.info("GEMINI_API_KEY not configured, using fallback analysis")
             analysis_result = create_fallback_analysis(preferences)
+            
+            # Enriquecer fallback con precios reales también
+            if 'recommendations' in analysis_result:
+                analysis_result['recommendations'] = enrich_recommendations_with_real_prices(
+                    analysis_result['recommendations']
+                )
         
         # Agregar metadatos
         analysis_result['timestamp'] = datetime.now().isoformat()
@@ -407,3 +426,134 @@ def get_market_data(symbol):
     except Exception as e:
         logger.error(f"Error getting market data for {symbol}: {e}")
         return jsonify({'error': str(e)}), 500
+
+def get_real_time_price(symbol):
+    """Obtener precio en tiempo real usando Yahoo Finance"""
+    try:        # Mapeo de símbolos de Trading212 a Yahoo Finance
+        symbol_mapping = {
+            'VWCE.DE': 'VWCE.DE',
+            'IWDA.AS': 'IWDA.AS', 
+            'TEC0.DE': 'XTCH.DE',  # Alternativo para tech ETF
+            'MSFT': 'MSFT',
+            'NVDA': 'NVDA',
+            'AAPL': 'AAPL',
+            'GOOGL': 'GOOGL',
+            'AMZN': 'AMZN',
+            'TSLA': 'TSLA',
+            'META': 'META',
+            'NFLX': 'NFLX',
+            'AMD': 'AMD',
+            'CRM': 'CRM',
+            'ADBE': 'ADBE',
+            'EIMI.AS': 'EIMI.AS',
+            'VUSA.AS': 'VUSA.AS'
+        }
+        
+        # Obtener símbolo correspondiente para Yahoo Finance
+        yf_symbol = symbol_mapping.get(symbol, symbol)
+        
+        # Crear ticker object
+        ticker = yf.Ticker(yf_symbol)
+        
+        # Obtener información rápida del ticker
+        info = ticker.fast_info
+        if hasattr(info, 'last_price') and info.last_price:
+            return float(info.last_price)
+        
+        # Fallback: obtener datos históricos del último día
+        hist = ticker.history(period="1d", interval="1m")
+        if not hist.empty:
+            return float(hist['Close'].iloc[-1])
+            
+        # Si no se puede obtener el precio, devolver None
+        logger.warning(f"No se pudo obtener precio para {symbol}")
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo precio para {symbol}: {e}")
+        return None
+
+def get_multiple_prices(symbols):
+    """Obtener precios para múltiples símbolos de forma eficiente"""
+    prices = {}
+    
+    try:        # Mapeo de símbolos
+        symbol_mapping = {
+            'VWCE.DE': 'VWCE.DE',
+            'IWDA.AS': 'IWDA.AS', 
+            'TEC0.DE': 'XTCH.DE',  # Alternativo para tech ETF
+            'MSFT': 'MSFT',
+            'NVDA': 'NVDA',
+            'AAPL': 'AAPL',
+            'GOOGL': 'GOOGL',
+            'AMZN': 'AMZN',
+            'TSLA': 'TSLA',
+            'META': 'META',
+            'EIMI.AS': 'EIMI.AS',
+            'VUSA.AS': 'VUSA.AS'
+        }
+        
+        # Convertir a símbolos de Yahoo Finance
+        yf_symbols = [symbol_mapping.get(symbol, symbol) for symbol in symbols]
+        
+        # Descargar datos para todos los símbolos de una vez
+        tickers = yf.download(yf_symbols, period="1d", interval="1d", group_by='ticker', progress=False)
+        
+        # Extraer precios
+        for i, symbol in enumerate(symbols):
+            yf_symbol = symbol_mapping.get(symbol, symbol)
+            try:
+                if len(yf_symbols) == 1:
+                    # Si solo hay un símbolo, la estructura es diferente
+                    price = float(tickers['Close'].iloc[-1])
+                else:
+                    # Múltiples símbolos
+                    price = float(tickers[(yf_symbol, 'Close')].iloc[-1])
+                prices[symbol] = price
+            except:
+                # Fallback individual si falla
+                individual_price = get_real_time_price(symbol)
+                if individual_price:
+                    prices[symbol] = individual_price
+                    
+    except Exception as e:
+        logger.error(f"Error descargando precios múltiples: {e}")
+        # Fallback a llamadas individuales
+        for symbol in symbols:
+            price = get_real_time_price(symbol)
+            if price:
+                prices[symbol] = price
+    
+    return prices
+
+def enrich_recommendations_with_real_prices(recommendations):
+    """Enriquecer recomendaciones con precios reales"""
+    if not recommendations:
+        return recommendations
+        
+    # Extraer símbolos de las recomendaciones
+    symbols = [rec.get('symbol') for rec in recommendations if rec.get('symbol')]
+    
+    if not symbols:
+        return recommendations
+        
+    # Obtener precios reales
+    logger.info(f"Obteniendo precios en tiempo real para: {symbols}")
+    real_prices = get_multiple_prices(symbols)
+    
+    # Actualizar recomendaciones con precios reales
+    for rec in recommendations:
+        symbol = rec.get('symbol')
+        if symbol and symbol in real_prices:
+            current_price = real_prices[symbol]
+            rec['currentPrice'] = round(current_price, 2)
+            
+            # Recalcular target price y stop loss basado en el precio actual
+            potential_return = rec.get('potentialReturn', 0.1)
+            if potential_return and current_price:
+                rec['targetPrice'] = round(current_price * (1 + potential_return), 2)
+                rec['stopLoss'] = round(current_price * 0.85, 2)  # 15% stop loss
+                
+            logger.info(f"Precio actualizado para {symbol}: €{current_price}")
+    
+    return recommendations
