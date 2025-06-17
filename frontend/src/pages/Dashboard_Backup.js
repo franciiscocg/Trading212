@@ -20,9 +20,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
+  }, []);  const loadDashboardData = async () => {
     setLoading(true);
     setError(null);
     
@@ -47,7 +45,6 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
-
   const handleSync = async () => {
     try {
       setLoading(true);
@@ -60,8 +57,7 @@ export default function Dashboard() {
       // Recargar datos después de la sincronización
       await loadDashboardData();
       
-    } catch (err) {
-      console.error('Sync error:', err);
+    } catch (err) {      console.error('Sync error:', err);
       
       if (err.response?.data?.error?.includes('rate limit')) {
         setError('Trading212 API rate limit alcanzado. Espera unos minutos antes de sincronizar de nuevo.');
@@ -77,7 +73,6 @@ export default function Dashboard() {
   if (loading) {
     return <LoadingSpinner />;
   }
-
   if (error) {
     return (
       <div className="text-center py-12">
@@ -115,10 +110,8 @@ export default function Dashboard() {
         </div>
       </div>
     );
-  }
-
-  // Extraer datos del portafolio
-  const portfolioData = portfolio || {};
+  }  const portfolioData = portfolio || {};
+  const metrics = analytics || {};
   const positions = portfolio?.positions || [];
   
   // Calcular métricas adicionales basadas en posiciones reales
@@ -128,11 +121,29 @@ export default function Dashboard() {
     losing_positions: positions.filter(p => p.unrealized_pnl < 0).length,
     cash_percentage: portfolioData.total_value > 0 ? (portfolioData.cash_balance / portfolioData.total_value * 100) : 0,
     win_rate: positions.length > 0 ? (positions.filter(p => p.unrealized_pnl > 0).length / positions.length * 100) : 0,
-    ...(analytics || {})
+    ...metrics
   };
 
   return (
     <div className="space-y-6">
+      {/* Demo Banner */}
+      {isDemo && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <ChartBarIcon className="h-5 w-5 text-blue-600" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-blue-800">
+                Modo Demostración
+              </h3>
+              <div className="mt-1 text-sm text-blue-700">
+                Mostrando datos de ejemplo. Configura tu API key en Settings para ver datos reales.
+              </div>
+            </div>
+          </div>        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -150,7 +161,6 @@ export default function Dashboard() {
           <button 
             onClick={handleSync}
             className="btn-primary flex items-center space-x-2"
-            disabled={loading}
           >
             <ArrowUpIcon className="h-4 w-4" />
             <span>Sincronizar</span>
@@ -200,8 +210,7 @@ export default function Dashboard() {
               <div className="text-sm font-medium text-gray-500">Efectivo</div>
               <div className="text-2xl font-bold text-gray-900">
                 {formatCurrency(portfolioData.cash_balance)}
-              </div>
-              <div className="text-sm text-gray-600">
+              </div>              <div className="text-sm text-gray-600">
                 {formatPercentage(calculatedMetrics.cash_percentage)}
               </div>
             </div>
@@ -214,8 +223,7 @@ export default function Dashboard() {
               <ChartBarIcon className="h-8 w-8 text-purple-600" />
             </div>
             <div className="ml-4">
-              <div className="text-sm font-medium text-gray-500">Posiciones</div>
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-sm font-medium text-gray-500">Posiciones</div>              <div className="text-2xl font-bold text-gray-900">
                 {calculatedMetrics.positions_count || 0}
               </div>
               <div className="text-sm text-gray-600">
@@ -226,7 +234,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Gráfico del portafolio y Top Posiciones */}
+      {/* Gráfico del portafolio */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">
@@ -241,7 +249,7 @@ export default function Dashboard() {
 
         <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Posiciones Actuales
+            Top Posiciones
           </h3>
           <div className="space-y-3">
             {positions.slice(0, 5).map((position, index) => (
@@ -267,20 +275,15 @@ export default function Dashboard() {
                 </div>
               </div>
             ))}
-            {positions.length === 0 && (
-              <div className="text-center text-gray-500 py-4">
-                No hay posiciones para mostrar
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Métricas detalladas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Métricas adicionales */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">
-            P&L Detallado
+            Rendimiento
           </h3>
           <div className="space-y-3">
             <div className="flex justify-between">
@@ -296,15 +299,13 @@ export default function Dashboard() {
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Cantidad Invertida</span>
+              <span className="text-gray-600">Capital Invertido</span>
               <span className="text-gray-900">
                 {formatCurrency(portfolioData.invested_amount)}
               </span>
             </div>
           </div>
-        </div>
-
-        <div className="card">
+        </div>        <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">
             Detalle de Posiciones
           </h3>
@@ -331,8 +332,7 @@ export default function Dashboard() {
           </h3>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-600">Posiciones Ganadoras</span>
-              <span className="text-trading-green font-medium">
+              <span className="text-gray-600">Posiciones Ganadoras</span>              <span className="text-trading-green font-medium">
                 {calculatedMetrics.winning_positions || 0}
               </span>
             </div>
