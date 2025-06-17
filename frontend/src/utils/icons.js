@@ -3,6 +3,7 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
   ArrowTrendingUpIcon,
+  ArrowPathIcon,
   CurrencyEuroIcon,
   ChartBarIcon,
   BanknotesIcon,
@@ -24,6 +25,7 @@ export {
   ArrowUpIcon,
   ArrowDownIcon,
   ArrowTrendingUpIcon as TrendingUpIcon, // Alias para compatibilidad
+  ArrowPathIcon,
   CurrencyEuroIcon,
   ChartBarIcon,
   BanknotesIcon,

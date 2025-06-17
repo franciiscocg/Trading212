@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { positionsService } from '../services/api';
+import { positionsService, portfolioService } from '../services/api';
 import { formatCurrency, formatPercentage, getValueColor, debounce } from '../utils/formatters';
-import { MagnifyingGlassIcon, ArrowUpIcon, ArrowDownIcon } from '../utils/icons';
+import { MagnifyingGlassIcon, ArrowUpIcon, ArrowDownIcon, ArrowPathIcon, CheckCircleIcon } from '../utils/icons';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function Portfolio() {
   const [positions, setPositions] = useState([]);
   const [filteredPositions, setFilteredPositions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('value');
-  const [sortDirection, setSortDirection] = useState('desc');
+  const [error, setError] = useState(null);  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('value');  const [sortDirection, setSortDirection] = useState('desc');
+  const [syncing, setSyncing] = useState(false);
+  const [selectedPosition, setSelectedPosition] = useState(null);
+  const [syncMessage, setSyncMessage] = useState(null);
 
   useEffect(() => {
     loadPositions();
@@ -33,15 +34,59 @@ export default function Portfolio() {
     handleSearch(searchQuery);
   }, [searchQuery, positions]);
 
+  const syncPortfolio = async () => {
+    setSyncing(true);
+    setError(null);
+      try {
+      await portfolioService.syncPortfolio();
+      // Después de sincronizar, recargar las posiciones
+      await loadPositions();
+      setSyncMessage('Datos sincronizados exitosamente');
+      setTimeout(() => setSyncMessage(null), 3000); // Ocultar mensaje después de 3 segundos
+    } catch (err) {
+      let errorMessage = 'Error sincronizando datos';
+      
+      if (err.response?.status === 429) {
+        errorMessage = 'Límite de API excedido. Inténtalo de nuevo en unos minutos.';
+      } else if (err.response?.status === 401) {
+        errorMessage = 'API Key inválida. Verifica tu configuración.';
+      } else if (err.response?.status >= 500) {
+        errorMessage = 'Error del servidor durante la sincronización.';
+      }
+      
+      setError(errorMessage);
+      console.error('Sync error:', err);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const loadPositions = async () => {
     setLoading(true);
     setError(null);
-    
-    try {
+      try {
       const response = await positionsService.getPositions();
-      setPositions(response.data);
-      setFilteredPositions(response.data);
-    } catch (err) {      setError('Error cargando posiciones');
+      if (response.data && Array.isArray(response.data)) {
+        setPositions(response.data);
+        setFilteredPositions(response.data);
+        setError(null);
+      } else {
+        throw new Error('Invalid data format received from server');
+      }
+    } catch (err) {
+      let errorMessage = 'Error cargando posiciones';
+      
+      if (err.response?.status === 404) {
+        errorMessage = 'No se encontraron datos del portafolio. Sincroniza tu cuenta de Trading212 primero.';
+      } else if (err.response?.status === 429) {
+        errorMessage = 'Límite de solicitudes excedido. Inténtalo de nuevo en unos minutos.';
+      } else if (err.response?.status >= 500) {
+        errorMessage = 'Error del servidor. Verifica que el backend esté funcionando.';
+      } else if (err.code === 'NETWORK_ERROR' || err.message?.includes('Network Error')) {
+        errorMessage = 'Error de conexión. Verifica que el backend esté corriendo en localhost:5000.';
+      }
+      
+      setError(errorMessage);
       console.error('Positions error:', err);
     } finally {
       setLoading(false);
@@ -82,20 +127,39 @@ export default function Portfolio() {
   if (loading) {
     return <LoadingSpinner />;
   }
-
   if (error) {
     return (
       <div className="text-center py-12">
-        <div className="text-red-600 mb-4">{error}</div>
-        <button onClick={loadPositions} className="btn-primary">
-          Reintentar
-        </button>
+        <div className="text-red-600 mb-4 text-lg">{error}</div>
+        <div className="space-x-4">
+          <button onClick={loadPositions} className="btn-primary">
+            Reintentar
+          </button>
+          {error.includes('portafolio') && (
+            <button onClick={syncPortfolio} disabled={syncing} className="btn-secondary">
+              {syncing ? 'Sincronizando...' : 'Sincronizar Datos'}
+            </button>
+          )}
+        </div>
       </div>
     );
   }
-
   return (
     <div className="space-y-6">
+      {/* Mensaje de éxito de sincronización */}
+      {syncMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-md p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <CheckCircleIcon className="h-5 w-5 text-green-400" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-green-800">{syncMessage}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -104,7 +168,15 @@ export default function Portfolio() {
             Todas tus posiciones de Trading212
           </p>
         </div>
-        <div className="mt-4 sm:mt-0">
+        <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-4">
+          <button
+            onClick={syncPortfolio}
+            disabled={syncing || loading}
+            className="btn-secondary flex items-center space-x-2"
+          >
+            <ArrowPathIcon className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+            <span>{syncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+          </button>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
@@ -118,10 +190,8 @@ export default function Portfolio() {
             />
           </div>
         </div>
-      </div>
-
-      {/* Resumen */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+      </div>{/* Resumen Extendido */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <div className="card">
           <div className="text-sm font-medium text-gray-500">Total Posiciones</div>
           <div className="text-2xl font-bold text-gray-900">{positions.length}</div>
@@ -138,7 +208,58 @@ export default function Portfolio() {
             {formatCurrency(positions.reduce((sum, pos) => sum + pos.unrealized_pnl, 0))}
           </div>
         </div>
+        <div className="card">
+          <div className="text-sm font-medium text-gray-500">P&L Promedio</div>
+          <div className={`text-2xl font-bold ${getValueColor(positions.length > 0 ? positions.reduce((sum, pos) => sum + pos.unrealized_pnl_pct, 0) / positions.length : 0)}`}>
+            {positions.length > 0 
+              ? formatPercentage(positions.reduce((sum, pos) => sum + pos.unrealized_pnl_pct, 0) / positions.length)
+              : '0.00%'
+            }
+          </div>
+        </div>
       </div>
+
+      {/* Estadísticas Adicionales */}
+      {positions.length > 0 && (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="card">
+            <div className="text-sm font-medium text-gray-500">Posiciones Ganadoras</div>
+            <div className="text-lg font-bold text-green-600">
+              {positions.filter(pos => pos.unrealized_pnl > 0).length}
+            </div>
+            <div className="text-xs text-gray-500">
+              {positions.length > 0 
+                ? `${((positions.filter(pos => pos.unrealized_pnl > 0).length / positions.length) * 100).toFixed(1)}%`
+                : '0%'
+              } del total
+            </div>
+          </div>
+          <div className="card">
+            <div className="text-sm font-medium text-gray-500">Posiciones Perdedoras</div>
+            <div className="text-lg font-bold text-red-600">
+              {positions.filter(pos => pos.unrealized_pnl < 0).length}
+            </div>
+            <div className="text-xs text-gray-500">
+              {positions.length > 0 
+                ? `${((positions.filter(pos => pos.unrealized_pnl < 0).length / positions.length) * 100).toFixed(1)}%`
+                : '0%'
+              } del total
+            </div>
+          </div>
+          <div className="card">
+            <div className="text-sm font-medium text-gray-500">Posiciones Neutras</div>
+            <div className="text-lg font-bold text-gray-600">
+              {positions.filter(pos => pos.unrealized_pnl === 0).length}
+            </div>
+            <div className="text-xs text-gray-500">
+              {positions.length > 0 
+                ? `${((positions.filter(pos => pos.unrealized_pnl === 0).length / positions.length) * 100).toFixed(1)}%`
+                : '0%'
+              } del total
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabla de posiciones */}
       <div className="card overflow-hidden">
@@ -213,13 +334,16 @@ export default function Portfolio() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredPositions.map((position) => (
-                <tr key={position.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                <tr 
+                  key={position.id} 
+                  className="hover:bg-gray-50 cursor-pointer transition-colors duration-200"
+                  onClick={() => setSelectedPosition(selectedPosition?.id === position.id ? null : position)}
+                >                  <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-gray-900">
                         {position.ticker}
                       </div>
-                      {position.company_name && (
+                      {position.company_name && position.company_name !== position.ticker && (
                         <div className="text-sm text-gray-500">
                           {position.company_name.length > 30 
                             ? position.company_name.substring(0, 30) + '...'
@@ -257,16 +381,97 @@ export default function Portfolio() {
               ))}
             </tbody>
           </table>
-        </div>
-
-        {filteredPositions.length === 0 && (
+        </div>        {filteredPositions.length === 0 && (
           <div className="text-center py-12">
-            <div className="text-gray-500">
-              {searchQuery ? 'No se encontraron posiciones' : 'No hay posiciones para mostrar'}
+            <div className="text-gray-500 mb-4">
+              {searchQuery ? 'No se encontraron posiciones que coincidan con tu búsqueda' : 'No hay posiciones para mostrar'}
             </div>
+            {!searchQuery && positions.length === 0 && (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-400">
+                  Tu portafolio parece estar vacío. Sincroniza tus datos de Trading212 para ver tus posiciones.
+                </p>
+                <button onClick={syncPortfolio} disabled={syncing} className="btn-primary">
+                  {syncing ? 'Sincronizando...' : 'Sincronizar Datos'}
+                </button>
+              </div>            )}
           </div>
         )}
       </div>
+
+      {/* Detalles de posición seleccionada */}
+      {selectedPosition && (
+        <div className="card">          <div className="border-b border-gray-200 pb-4 mb-4 flex justify-between items-center">
+            <h3 className="text-lg font-medium text-gray-900">
+              Detalles de {selectedPosition.ticker}
+            </h3>
+            <button
+              onClick={() => setSelectedPosition(null)}
+              className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1 rounded border"
+            >
+              Cerrar
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <div className="text-sm font-medium text-gray-500">Cantidad Total</div>
+              <div className="text-lg font-bold text-gray-900">
+                {selectedPosition.quantity.toLocaleString()} acciones
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-500">Precio Promedio</div>
+              <div className="text-lg font-bold text-gray-900">
+                {formatCurrency(selectedPosition.average_price)}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-500">Precio Actual</div>
+              <div className="text-lg font-bold text-gray-900">
+                {formatCurrency(selectedPosition.current_price)}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-500">Diferencia de Precio</div>
+              <div className={`text-lg font-bold ${getValueColor(selectedPosition.current_price - selectedPosition.average_price)}`}>
+                {formatCurrency(selectedPosition.current_price - selectedPosition.average_price)}
+              </div>
+            </div>            <div>
+              <div className="text-sm font-medium text-gray-500">Inversión Total</div>
+              <div className="text-lg font-bold text-gray-900">
+                {formatCurrency(selectedPosition.cost_basis || selectedPosition.quantity * selectedPosition.average_price)}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-500">Valor Actual</div>
+              <div className="text-lg font-bold text-gray-900">
+                {formatCurrency(selectedPosition.market_value)}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-500">Ganancia/Pérdida</div>
+              <div className={`text-lg font-bold ${getValueColor(selectedPosition.unrealized_pnl)}`}>
+                {formatCurrency(selectedPosition.unrealized_pnl)}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-500">Rendimiento %</div>
+              <div className={`text-lg font-bold ${getValueColor(selectedPosition.unrealized_pnl_pct)}`}>
+                {formatPercentage(selectedPosition.unrealized_pnl_pct)}
+              </div>
+            </div>
+          </div>
+          
+          {selectedPosition.company_name && selectedPosition.company_name !== selectedPosition.ticker && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="text-sm font-medium text-gray-500">Nombre de la Empresa</div>
+              <div className="text-lg text-gray-900">{selectedPosition.company_name}</div>
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
 }
