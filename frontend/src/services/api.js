@@ -91,15 +91,25 @@ export const investmentsService = {
     });
     return api.get(`/investments/available?${queryParams.toString()}`);
   },
-  
+
   search: (query, limit = 50) =>
     api.get(`/investments/search?q=${encodeURIComponent(query)}&limit=${limit}`),
-  
+
   getExchanges: () =>
     api.get('/investments/exchanges'),
-  
+
   sync: () =>
     api.post('/investments/sync'),
+
+  // Servicios de análisis de sentimientos
+  analyzeSentiment: (symbols, newsLimit = 5) =>
+    api.post('/investments/sentiment-analysis', {
+      symbols: symbols,
+      news_limit: newsLimit
+    }),
+
+  getSentimentForSymbol: (symbol, newsLimit = 5) =>
+    api.get(`/investments/sentiment-analysis/${symbol}?news_limit=${newsLimit}`),
 };
 
 // Health check para verificar conectividad

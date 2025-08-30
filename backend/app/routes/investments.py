@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.services.trading212_service import Trading212Service
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 investments_bp = Blueprint('investments', __name__)
@@ -216,3 +217,104 @@ def sync_investments():
     except Exception as e:
         logger.error(f"Error syncing investments: {e}")
         return jsonify({'error': f'Failed to sync investments: {str(e)}'}), 500
+
+@investments_bp.route('/sentiment-analysis', methods=['POST'])
+def analyze_sentiment():
+    """Analizar sentimientos de noticias para una lista de símbolos bursátiles"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'symbols' not in data:
+            return jsonify({'error': 'Se requiere una lista de símbolos'}), 400
+        
+        symbols = data['symbols']
+        if not isinstance(symbols, list) or len(symbols) == 0:
+            return jsonify({'error': 'La lista de símbolos no puede estar vacía'}), 400
+        
+        # Limitar el número de símbolos para evitar sobrecargar la API
+        max_symbols = 10
+        if len(symbols) > max_symbols:
+            return jsonify({
+                'error': f'Máximo {max_symbols} símbolos permitidos por petición',
+                'received': len(symbols),
+                'max_allowed': max_symbols
+            }), 400
+        
+        news_limit = min(int(data.get('news_limit', 5)), 10)  # Máximo 10 noticias por símbolo
+        
+        logger.info(f"🔍 Iniciando análisis de sentimientos para {len(symbols)} símbolos: {symbols}")
+        
+        # Importar el analizador de sentimientos
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from sentiment_analyzer import SentimentAnalyzer
+        except ImportError as e:
+            logger.error(f"Error importando SentimentAnalyzer: {e}")
+            return jsonify({
+                'error': 'Servicio de análisis de sentimientos no disponible',
+                'details': 'Verifica que las dependencias estén instaladas (vaderSentiment, textblob)'
+            }), 500
+        
+        # Inicializar analizador
+        analyzer = SentimentAnalyzer()
+        
+        # Realizar análisis
+        results = analyzer.analyze_multiple_companies(symbols, news_limit=news_limit, delay=1.0)
+        
+        # Preparar respuesta
+        response_data = {
+            'success': True,
+            'analyzed_companies': len(results),
+            'results': results,
+            'summary': analyzer.get_sentiment_summary(results),
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        logger.info(f"✅ Análisis de sentimientos completado para {len(results)} empresas")
+        return jsonify(response_data)
+    
+    except Exception as e:
+        logger.error(f"Error en análisis de sentimientos: {e}")
+        return jsonify({
+            'error': 'Error interno del servidor',
+            'details': str(e)
+        }), 500
+
+@investments_bp.route('/sentiment-analysis/<symbol>', methods=['GET'])
+def get_sentiment_for_symbol(symbol):
+    """Obtener análisis de sentimientos para un símbolo específico"""
+    try:
+        news_limit = min(int(request.args.get('news_limit', 5)), 10)
+        
+        logger.info(f"🔍 Analizando sentimiento para {symbol}")
+        
+        # Importar el analizador de sentimientos
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from sentiment_analyzer import SentimentAnalyzer
+        except ImportError as e:
+            logger.error(f"Error importando SentimentAnalyzer")
+            return jsonify({
+                'error': 'Servicio de análisis de sentimientos no disponible'
+            }), 500
+        
+        # Inicializar analizador
+        analyzer = SentimentAnalyzer()
+        
+        # Realizar análisis
+        result = analyzer.analyze_company_sentiment(symbol, news_limit=news_limit)
+        
+        logger.info(f"✅ Análisis completado para {symbol}")
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Error analizando {symbol}: {e}")
+        return jsonify({
+            'error': 'Error interno del servidor',
+            'symbol': symbol,
+            'details': str(e)
+        }), 500

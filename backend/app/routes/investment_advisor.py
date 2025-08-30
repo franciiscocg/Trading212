@@ -7,9 +7,30 @@ from app.models import Portfolio, Position, db
 import google.generativeai as genai
 import yfinance as yf
 import time
+import sys
+import os
+
+# Agregar el directorio padre al path para importar sentiment_analyzer
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from sentiment_analyzer import SentimentAnalyzer
 
 logger = logging.getLogger(__name__)
 investment_advisor_bp = Blueprint('investment_advisor', __name__)
+
+# Inicializar el analizador de sentimientos
+sentiment_analyzer = None
+
+def get_sentiment_analyzer():
+    """Obtener instancia del analizador de sentimientos"""
+    global sentiment_analyzer
+    if sentiment_analyzer is None:
+        try:
+            sentiment_analyzer = SentimentAnalyzer()
+            logger.info("✅ Analizador de sentimientos inicializado correctamente")
+        except Exception as e:
+            logger.error(f"❌ Error inicializando analizador de sentimientos: {e}")
+            sentiment_analyzer = None
+    return sentiment_analyzer
 
 def get_gemini_api_key():
     """Obtener la API key de Gemini desde las variables de entorno"""
@@ -287,6 +308,11 @@ def analyze_investments():
                     analysis_result['recommendations'] = enrich_recommendations_with_real_prices(
                         analysis_result['recommendations']
                     )
+                    
+                    # Agregar análisis de sentimientos a las recomendaciones
+                    analysis_result['recommendations'] = enrich_recommendations_with_sentiment(
+                        analysis_result['recommendations']
+                    )
                         
             except Exception as gemini_error:
                 logger.warning(f"Gemini API failed, using fallback: {gemini_error}")
@@ -306,6 +332,11 @@ def analyze_investments():
                 analysis_result['recommendations'] = enrich_recommendations_with_real_prices(
                     analysis_result['recommendations']
                 )
+                
+                # Agregar análisis de sentimientos a las recomendaciones
+                analysis_result['recommendations'] = enrich_recommendations_with_sentiment(
+                    analysis_result['recommendations']
+                )
         
         # Agregar metadatos
         analysis_result['timestamp'] = datetime.now().isoformat()
@@ -319,6 +350,102 @@ def analyze_investments():
         return jsonify({
             'error': str(e),
             'message': 'Error generando recomendaciones de inversión'
+        }), 500
+
+@investment_advisor_bp.route('/sentiment-analysis', methods=['POST'])
+def analyze_sentiment():
+    """Analizar sentimientos de noticias para una lista de símbolos bursátiles"""
+    try:
+        data = request.get_json()
+        symbols = data.get('symbols', [])
+        news_limit = data.get('news_limit', 5)
+
+        if not symbols:
+            return jsonify({
+                'error': 'No symbols provided',
+                'message': 'Debe proporcionar una lista de símbolos bursátiles'
+            }), 400
+
+        # Obtener el analizador de sentimientos
+        analyzer = get_sentiment_analyzer()
+        if not analyzer:
+            return jsonify({
+                'error': 'Sentiment analyzer not available',
+                'message': 'El analizador de sentimientos no está disponible'
+            }), 500
+
+        logger.info(f"🔍 Iniciando análisis de sentimientos para {len(symbols)} símbolos")
+
+        # Realizar análisis de sentimientos
+        results = analyzer.analyze_multiple_companies(symbols, news_limit=news_limit, delay=1.0)
+
+        # Generar resumen
+        summary = analyzer.get_sentiment_summary(results)
+
+        # Preparar respuesta
+        response = {
+            'timestamp': datetime.now().isoformat(),
+            'symbols_analyzed': len(symbols),
+            'news_limit': news_limit,
+            'results': results,
+            'summary': summary,
+            'api_status': {
+                'newsapi_available': True,
+                'cache_enabled': True,
+                'rate_limiting_active': True
+            }
+        }
+
+        logger.info(f"✅ Análisis de sentimientos completado para {len(results)} empresas")
+        return jsonify(response)
+
+    except Exception as e:
+        logger.error(f"Error in sentiment analysis: {e}")
+        return jsonify({
+            'error': str(e),
+            'message': 'Error analizando sentimientos de noticias'
+        }), 500
+
+@investment_advisor_bp.route('/sentiment-analysis/<symbol>', methods=['GET'])
+def analyze_single_symbol_sentiment(symbol):
+    """Analizar sentimientos de noticias para un símbolo específico"""
+    try:
+        news_limit = int(request.args.get('news_limit', 5))
+
+        # Obtener el analizador de sentimientos
+        analyzer = get_sentiment_analyzer()
+        if not analyzer:
+            return jsonify({
+                'error': 'Sentiment analyzer not available',
+                'message': 'El analizador de sentimientos no está disponible'
+            }), 500
+
+        logger.info(f"🔍 Analizando sentimientos para {symbol}")
+
+        # Realizar análisis de sentimientos
+        result = analyzer.analyze_company_sentiment(symbol, news_limit=news_limit)
+
+        # Preparar respuesta
+        response = {
+            'timestamp': datetime.now().isoformat(),
+            'symbol': symbol,
+            'news_limit': news_limit,
+            'result': result,
+            'api_status': {
+                'newsapi_available': True,
+                'cache_enabled': True,
+                'rate_limiting_active': True
+            }
+        }
+
+        logger.info(f"✅ Análisis de sentimientos completado para {symbol}")
+        return jsonify(response)
+
+    except Exception as e:
+        logger.error(f"Error in sentiment analysis for {symbol}: {e}")
+        return jsonify({
+            'error': str(e),
+            'message': f'Error analizando sentimientos para {symbol}'
         }), 500
 
 def create_fallback_analysis(preferences):
@@ -565,3 +692,87 @@ def enrich_recommendations_with_real_prices(recommendations):
             logger.info(f"Precio actualizado para {symbol}: €{current_price}")
     
     return recommendations
+
+def enrich_recommendations_with_sentiment(recommendations):
+    """Enriquecer recomendaciones con análisis de sentimientos"""
+    if not recommendations:
+        return recommendations
+
+    # Obtener el analizador de sentimientos
+    analyzer = get_sentiment_analyzer()
+    if not analyzer:
+        logger.warning("Analizador de sentimientos no disponible, omitiendo análisis de sentimientos")
+        return recommendations
+
+    # Extraer símbolos de las recomendaciones
+    symbols = [rec.get('symbol') for rec in recommendations if rec.get('symbol')]
+
+    if not symbols:
+        return recommendations
+
+    logger.info(f"🔍 Obteniendo análisis de sentimientos para: {symbols}")
+
+    try:
+        # Realizar análisis de sentimientos (con límite reducido para no sobrecargar)
+        sentiment_results = analyzer.analyze_multiple_companies(symbols, news_limit=3, delay=0.5)
+
+        # Crear diccionario de resultados por símbolo
+        sentiment_dict = {result['symbol']: result for result in sentiment_results}
+
+        # Agregar análisis de sentimientos a cada recomendación
+        for rec in recommendations:
+            symbol = rec.get('symbol')
+            if symbol and symbol in sentiment_dict:
+                sentiment_data = sentiment_dict[symbol]
+                rec['sentimentAnalysis'] = {
+                    'overall_score': sentiment_data['sentiment']['overall_score'],
+                    'vader_compound': sentiment_data['sentiment']['vader_compound'],
+                    'textblob_polarity': sentiment_data['sentiment']['textblob_polarity'],
+                    'news_count': sentiment_data['news_count'],
+                    'sentiment_interpretation': interpret_sentiment_score(sentiment_data['sentiment']['overall_score'])
+                }
+
+                # Agregar información de sentimientos al reasoning
+                sentiment_reasoning = generate_sentiment_reasoning(sentiment_data)
+                if sentiment_reasoning:
+                    rec['reasoning'] += f" {sentiment_reasoning}"
+
+                logger.info(f"📊 Sentimiento agregado para {symbol}: {sentiment_data['sentiment']['overall_score']:.4f}")
+
+    except Exception as e:
+        logger.error(f"Error obteniendo análisis de sentimientos: {e}")
+        # No fallar completamente si el análisis de sentimientos falla
+
+    return recommendations
+
+def interpret_sentiment_score(score):
+    """Interpretar el score de sentimiento en términos comprensibles"""
+    if score >= 0.1:
+        return "Muy positivo 📈"
+    elif score >= 0.05:
+        return "Positivo 📊"
+    elif score >= -0.05:
+        return "Neutral ⚖️"
+    elif score >= -0.1:
+        return "Negativo 📉"
+    else:
+        return "Muy negativo 📉📉"
+
+def generate_sentiment_reasoning(sentiment_data):
+    """Generar texto explicativo basado en el análisis de sentimientos"""
+    if sentiment_data['news_count'] == 0:
+        return "No se encontraron noticias recientes para analizar el sentimiento."
+
+    score = sentiment_data['sentiment']['overall_score']
+    news_count = sentiment_data['news_count']
+
+    if score >= 0.1:
+        return f"El análisis de {news_count} noticias recientes muestra un sentimiento muy positivo en el mercado, lo que podría indicar un momentum alcista favorable."
+    elif score >= 0.05:
+        return f"El análisis de {news_count} noticias recientes muestra un sentimiento positivo moderado, sugiriendo un ambiente de mercado constructivo."
+    elif score >= -0.05:
+        return f"El análisis de {news_count} noticias recientes muestra un sentimiento neutral, indicando estabilidad en la percepción del mercado."
+    elif score >= -0.1:
+        return f"El análisis de {news_count} noticias recientes muestra un sentimiento ligeramente negativo, lo que podría requerir monitoreo adicional."
+    else:
+        return f"El análisis de {news_count} noticias recientes muestra un sentimiento muy negativo, sugiriendo cautela en el posicionamiento."

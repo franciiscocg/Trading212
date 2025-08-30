@@ -27,6 +27,12 @@ export default function Preferences() {
   const [hasMore, setHasMore] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
+  // Estados para selección y análisis de sentimientos
+  const [selectedCompanies, setSelectedCompanies] = useState(new Set());
+  const [sentimentAnalysis, setSentimentAnalysis] = useState({});
+  const [analyzingSentiment, setAnalyzingSentiment] = useState(false);
+  const [sentimentError, setSentimentError] = useState(null);
+
   const itemsPerPage = 50;
 
   // Debounced search effect
@@ -204,6 +210,72 @@ export default function Preferences() {
     setCurrentPage(page);
   };
 
+  // Funciones para manejar selección de empresas
+  const handleCompanySelect = (ticker, isSelected) => {
+    const newSelected = new Set(selectedCompanies);
+    if (isSelected) {
+      newSelected.add(ticker);
+    } else {
+      newSelected.delete(ticker);
+    }
+    setSelectedCompanies(newSelected);
+  };
+
+  const handleSelectAll = (isSelected) => {
+    if (isSelected) {
+      const allTickers = new Set(filteredInvestments.map(inv => inv.ticker));
+      setSelectedCompanies(allTickers);
+    } else {
+      setSelectedCompanies(new Set());
+    }
+  };
+
+  // Función para analizar sentimientos
+  const analyzeSentiment = async () => {
+    if (selectedCompanies.size === 0) {
+      setSentimentError('Selecciona al menos una empresa para analizar');
+      return;
+    }
+
+    try {
+      setAnalyzingSentiment(true);
+      setSentimentError(null);
+
+      const symbols = Array.from(selectedCompanies);
+      console.log('🔍 Analizando sentimientos para:', symbols);
+
+      const response = await investmentsService.analyzeSentiment(symbols, 5);
+
+      // Organizar resultados por símbolo
+      const analysisBySymbol = {};
+      response.data.results.forEach(result => {
+        analysisBySymbol[result.symbol] = result;
+      });
+
+      setSentimentAnalysis(analysisBySymbol);
+      console.log('✅ Análisis de sentimientos completado');
+
+    } catch (err) {
+      console.error('❌ Error analizando sentimientos:', err);
+      setSentimentError('Error analizando sentimientos. Verifica tu conexión a internet.');
+    } finally {
+      setAnalyzingSentiment(false);
+    }
+  };
+
+  // Función para obtener el color del sentimiento
+  const getSentimentColor = (score) => {
+    if (score > 0.1) return 'text-green-600 bg-green-50';
+    if (score < -0.1) return 'text-red-600 bg-red-50';
+    return 'text-gray-600 bg-gray-50';
+  };
+
+  // Función para formatear el score de sentimiento
+  const formatSentimentScore = (score) => {
+    if (score === null || score === undefined) return 'N/A';
+    return score.toFixed(3);
+  };
+
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   if (loading && investments.length === 0) {
@@ -238,7 +310,26 @@ export default function Preferences() {
             Explora todas las empresas disponibles con sus logos y detalles completos
           </p>
         </div>
-        <div className="mt-4 sm:mt-0">
+        <div className="mt-4 sm:mt-0 flex space-x-3">
+          {selectedCompanies.size > 0 && (
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">
+                {selectedCompanies.size} empresa{selectedCompanies.size !== 1 ? 's' : ''} seleccionada{selectedCompanies.size !== 1 ? 's' : ''}
+              </span>
+              <button
+                onClick={analyzeSentiment}
+                disabled={analyzingSentiment}
+                className="btn-primary flex items-center space-x-2 disabled:opacity-50"
+              >
+                {analyzingSentiment ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <ChartBarIcon className="h-4 w-4" />
+                )}
+                <span>{analyzingSentiment ? 'Analizando...' : 'Analizar Sentimiento'}</span>
+              </button>
+            </div>
+          )}
           <button
             onClick={loadInvestments}
             className="btn-primary flex items-center space-x-2"
@@ -269,6 +360,37 @@ export default function Preferences() {
                 <button
                   onClick={() => setError(null)}
                   className="inline-flex bg-yellow-50 rounded-md p-1.5 text-yellow-500 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-yellow-50 focus:ring-yellow-600"
+                >
+                  <span className="sr-only">Cerrar</span>
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Banner de error de análisis de sentimientos */}
+      {sentimentError && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">
+                {sentimentError}
+              </p>
+            </div>
+            <div className="ml-auto pl-3">
+              <div className="-mx-1.5 -my-1.5">
+                <button
+                  onClick={() => setSentimentError(null)}
+                  className="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600"
                 >
                   <span className="sr-only">Cerrar</span>
                   <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -361,45 +483,112 @@ export default function Preferences() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <input
+                    type="checkbox"
+                    checked={selectedCompanies.size === filteredInvestments.length && filteredInvestments.length > 0}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                </th>
                 <th
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('ticker')}
                 >
                   Empresa {sortBy === 'ticker' && (sortOrder === 'asc' ? '↑' : '↓')}
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Sentimiento
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Vader
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  TextBlob
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Noticias
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {processedInvestments.map((investment) => (
-                <tr key={investment.ticker} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      {/* Logo de la empresa */}
-                      <div className="h-10 w-10 rounded-full mr-3 bg-gray-100 flex items-center justify-center overflow-hidden">
-                        {investment.logo_url ? (
-                          <img
-                            src={investment.logo_url}
-                            alt={`${investment.name} logo`}
-                            className="h-10 w-10 object-contain"
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.nextElementSibling.style.display = 'flex';
-                            }}
-                          />
-                        ) : null}
-                        {/* Placeholder cuando no hay logo */}
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm" style={{ display: investment.logo_url ? 'none' : 'flex' }}>
-                          {investment.ticker.charAt(0).toUpperCase()}
+              {processedInvestments.map((investment) => {
+                const sentiment = sentimentAnalysis[investment.ticker];
+                return (
+                  <tr key={investment.ticker} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedCompanies.has(investment.ticker)}
+                        onChange={(e) => handleCompanySelect(investment.ticker, e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {/* Logo de la empresa */}
+                        <div className="h-10 w-10 rounded-full mr-3 bg-gray-100 flex items-center justify-center overflow-hidden">
+                          {investment.logo_url ? (
+                            <img
+                              src={investment.logo_url}
+                              alt={`${investment.name} logo`}
+                              className="h-10 w-10 object-contain"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextElementSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          {/* Placeholder cuando no hay logo */}
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm" style={{ display: investment.logo_url ? 'none' : 'flex' }}>
+                            {investment.ticker.charAt(0).toUpperCase()}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">{investment.ticker}</div>
+                          <div className="text-sm text-gray-500">{investment.name}</div>
                         </div>
                       </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{investment.ticker}</div>
-                        <div className="text-sm text-gray-500">{investment.name}</div>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {sentiment ? (
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getSentimentColor(sentiment.sentiment.overall_score)}`}>
+                          {formatSentimentScore(sentiment.sentiment.overall_score)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">No analizado</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {sentiment ? (
+                        <span className={`text-sm font-medium ${getSentimentColor(sentiment.sentiment.vader_compound)}`}>
+                          {formatSentimentScore(sentiment.sentiment.vader_compound)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {sentiment ? (
+                        <span className={`text-sm font-medium ${getSentimentColor(sentiment.sentiment.textblob_polarity)}`}>
+                          {formatSentimentScore(sentiment.sentiment.textblob_polarity)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {sentiment ? (
+                        <span className="text-sm text-gray-900">
+                          {sentiment.news_count}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
