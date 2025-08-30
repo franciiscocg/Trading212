@@ -18,7 +18,13 @@ import {
   DocumentChartBarIcon,
   Bars3Icon,
   XMarkIcon,
-  LightBulbIcon
+  LightBulbIcon,
+  GlobeAltIcon,
+  BuildingOfficeIcon,
+  CurrencyDollarIcon,
+  MapPinIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 
 // Exportar iconos con nombres consistentes
@@ -41,5 +47,12 @@ export {
   DocumentChartBarIcon,
   Bars3Icon,
   XMarkIcon,
-  LightBulbIcon
+  LightBulbIcon,
+  GlobeAltIcon,
+  BuildingOfficeIcon,
+  CurrencyDollarIcon,
+  MapPinIcon,
+  ArrowPathIcon as RefreshIcon, // Alias para refresh
+  ChevronLeftIcon,
+  ChevronRightIcon
 };

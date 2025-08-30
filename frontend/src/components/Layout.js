@@ -7,14 +7,18 @@ import {
   DocumentChartBarIcon,
   LightBulbIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  GlobeAltIcon,
+  MagnifyingGlassIcon
 } from '../utils/icons';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: HomeIcon },
   { name: 'Portafolio', href: '/portfolio', icon: ChartBarIcon },
+  { name: 'Inversiones', href: '/investments', icon: MagnifyingGlassIcon },
   { name: 'Analytics', href: '/analytics', icon: DocumentChartBarIcon },
   { name: 'Investment Advisor', href: '/investment-advisor', icon: LightBulbIcon },
+  { name: 'Mis Preferencias', href: '/preferences', icon: GlobeAltIcon },
   { name: 'Configuración', href: '/settings', icon: CogIcon },
 ];
 

@@ -90,18 +90,22 @@ class Trading212API:
         
         return self._make_request('GET', '/equity/dividends', params=params)
     
-    def get_exports(self) -> List[Dict]:
-        """Obtener lista de exportaciones disponibles"""
-        return self._make_request('GET', '/equity/exports')
+    def get_instruments(self, exchange: str = None, limit: int = 100) -> List[Dict]:
+        """Obtener lista de instrumentos disponibles"""
+        params = {'limit': limit}
+        if exchange:
+            params['exchange'] = exchange
+        
+        return self._make_request('GET', '/equity/metadata/instruments', params=params)
     
-    def request_export(self, data_included: Dict, time_from: datetime, time_to: datetime) -> Dict:
-        """Solicitar exportación de datos"""
-        data = {
-            'dataIncluded': data_included,
-            'timeFrom': time_from.isoformat(),
-            'timeTo': time_to.isoformat()
-        }
-        return self._make_request('POST', '/equity/exports', data=data)
+    def get_exchanges(self) -> List[Dict]:
+        """Obtener lista de exchanges disponibles"""
+        return self._make_request('GET', '/equity/metadata/exchanges')
+    
+    def search_instruments(self, query: str, limit: int = 50) -> List[Dict]:
+        """Buscar instrumentos por nombre o ticker"""
+        params = {'query': query, 'limit': limit}
+        return self._make_request('GET', '/equity/metadata/instruments/search', params=params)
 
 class Trading212Service:
     """Servicio para gestionar datos de Trading212"""
@@ -247,4 +251,189 @@ class Trading212Service:
         
         except Exception as e:
             logger.error(f"Error sincronizando transacciones: {e}")
+            raise
+    
+    def sync_available_investments_to_db(self):
+        """Sincronizar todas las inversiones disponibles a la base de datos"""
+        try:
+            from app.models import AvailableInvestment, db
+            
+            logger.info("Starting sync of available investments to database...")
+            
+            # Obtener exchanges primero
+            exchanges_data = self.api.get_exchanges()
+            exchange_map = {ex['id']: ex['name'] for ex in exchanges_data}
+            
+            # Obtener todas las inversiones disponibles (sin límite para sincronización completa)
+            instruments = self.api.get_instruments(limit=5000)  # Máximo razonable
+            
+            synced_count = 0
+            updated_count = 0
+            
+            for instrument in instruments:
+                # Limpiar el ticker (remover sufijos como _US_EQ)
+                raw_ticker = instrument.get('ticker', '')
+                clean_ticker = raw_ticker.split('_')[0] if '_' in raw_ticker else raw_ticker
+                
+                # Intentar determinar el exchange basado en el ticker
+                exchange_name = self._guess_exchange_from_ticker(clean_ticker)
+                
+                # Verificar si ya existe
+                existing = AvailableInvestment.query.filter_by(ticker=clean_ticker).first()
+                
+                # Generar URL del logo usando Clearbit
+                logo_url = None
+                if clean_ticker:
+                    # Verificar si el logo existe antes de asignarlo
+                    try:
+                        import requests
+                        response = requests.head(f"https://logo.clearbit.com/{clean_ticker.lower()}.com", timeout=2)
+                        if response.status_code == 200:
+                            logo_url = f"https://logo.clearbit.com/{clean_ticker.lower()}.com"
+                    except:
+                        # Si hay error al verificar, no asignar logo
+                        pass
+                
+                if existing:
+                    # Actualizar
+                    existing.name = instrument.get('name', '')
+                    existing.isin = instrument.get('isin', '')
+                    existing.currency = instrument.get('currencyCode', 'USD')
+                    existing.exchange = exchange_name
+                    existing.type = instrument.get('type', '')
+                    existing.current_price = float(instrument.get('maxOpenQuantity', 0) or 0)
+                    existing.current_price_eur = float(instrument.get('maxOpenQuantity', 0) or 0) * self.usd_to_eur_rate
+                    existing.min_trade_quantity = 1
+                    existing.max_trade_quantity = int(instrument.get('maxOpenQuantity', 1000000) or 1000000)
+                    existing.is_tradable = True
+                    existing.logo_url = logo_url
+                    existing.last_updated = datetime.utcnow()
+                    updated_count += 1
+                else:
+                    # Crear nuevo
+                    new_investment = AvailableInvestment(
+                        ticker=clean_ticker,
+                        name=instrument.get('name', ''),
+                        isin=instrument.get('isin', ''),
+                        currency=instrument.get('currencyCode', 'USD'),
+                        exchange=exchange_name,
+                        type=instrument.get('type', ''),
+                        current_price=float(instrument.get('maxOpenQuantity', 0) or 0),
+                        current_price_eur=float(instrument.get('maxOpenQuantity', 0) or 0) * self.usd_to_eur_rate,
+                        min_trade_quantity=1,
+                        max_trade_quantity=int(instrument.get('maxOpenQuantity', 1000000) or 1000000),
+                        is_tradable=True,
+                        logo_url=logo_url
+                    )
+                    db.session.add(new_investment)
+                    synced_count += 1
+            
+            db.session.commit()
+            logger.info(f"Sync completed: {synced_count} new investments, {updated_count} updated")
+            
+            return {
+                'synced': synced_count,
+                'updated': updated_count,
+                'total': len(instruments)
+            }
+        
+        except Exception as e:
+            logger.error(f"Error syncing available investments to database: {e}")
+            db.session.rollback()
+            raise
+    
+    def _guess_exchange_from_ticker(self, ticker):
+        """Intentar determinar el exchange basado en el ticker"""
+        if not ticker:
+            return 'UNKNOWN'
+        
+        ticker_upper = ticker.upper()
+        
+        # Exchanges comunes basados en sufijos o patrones conocidos
+        if ticker_upper.endswith('.L'):
+            return 'LSE'
+        elif ticker_upper.endswith('.DE'):
+            return 'XETRA'
+        elif ticker_upper.endswith('.PA'):
+            return 'EURONEXT'
+        elif ticker_upper.endswith('.MI'):
+            return 'BORSA_ITALIANA'
+        elif ticker_upper.endswith('.AS'):
+            return 'EURONEXT'
+        elif ticker_upper.endswith('.BR'):
+            return 'EURONEXT'
+        elif ticker_upper.endswith('.OL'):
+            return 'OSLO'
+        elif ticker_upper.endswith('.ST'):
+            return 'NASDAQ_OMX'
+        elif ticker_upper.endswith('.HE'):
+            return 'HELSINKI'
+        elif ticker_upper.endswith('.CO'):
+            return 'NASDAQ_OMX'
+        elif ticker_upper.endswith('.LS'):
+            return 'EURONEXT'
+        elif len(ticker) <= 4 and ticker_upper.isalpha():
+            return 'NYSE'  # Asumir NYSE para tickers cortos alfabéticos
+        else:
+            return 'NASDAQ'  # Default para tickers más largos
+    
+    def get_available_investments_from_db(self, exchange=None, limit=100, offset=0, search=None):
+        """Obtener inversiones disponibles desde la base de datos"""
+        try:
+            from app.models import AvailableInvestment
+            from app import db
+            
+            query = AvailableInvestment.query
+            
+            # Filtros
+            if exchange:
+                query = query.filter(AvailableInvestment.exchange == exchange)
+            
+            if search:
+                search_term = f"%{search}%"
+                query = query.filter(
+                    db.or_(
+                        AvailableInvestment.ticker.ilike(search_term),
+                        AvailableInvestment.name.ilike(search_term)
+                    )
+                )
+            
+            # Ordenar por nombre
+            query = query.order_by(AvailableInvestment.name)
+            
+            # Paginación
+            total = query.count()
+            investments = query.offset(offset).limit(limit).all()
+            
+            return {
+                'instruments': [inv.to_dict() for inv in investments],
+                'total': total,
+                'page': offset // limit + 1,
+                'limit': limit,
+                'offset': offset,
+                'has_more': offset + limit < total
+            }
+        
+        except Exception as e:
+            logger.error(f"Error getting available investments from database: {e}")
+            raise
+    
+    def get_exchanges_from_db(self):
+        """Obtener lista de exchanges desde la base de datos"""
+        try:
+            from app.models import AvailableInvestment
+            from app import db
+            
+            exchanges = db.session.query(
+                AvailableInvestment.exchange,
+                db.func.count(AvailableInvestment.id).label('count')
+            ).group_by(AvailableInvestment.exchange).all()
+            
+            return [
+                {'code': exchange, 'name': exchange, 'count': count}
+                for exchange, count in exchanges if exchange
+            ]
+        
+        except Exception as e:
+            logger.error(f"Error getting exchanges from database: {e}")
             raise

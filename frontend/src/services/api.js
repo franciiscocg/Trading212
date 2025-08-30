@@ -80,6 +80,28 @@ export const investmentAdvisorService = {
     api.get(`/investment-advisor/market-data/${symbol}`),
 };
 
+// Servicios de Inversiones
+export const investmentsService = {
+  getAvailable: (params = {}) => {
+    const queryParams = new URLSearchParams();
+    Object.keys(params).forEach(key => {
+      if (params[key] !== null && params[key] !== undefined && params[key] !== '') {
+        queryParams.append(key, params[key]);
+      }
+    });
+    return api.get(`/investments/available?${queryParams.toString()}`);
+  },
+  
+  search: (query, limit = 50) =>
+    api.get(`/investments/search?q=${encodeURIComponent(query)}&limit=${limit}`),
+  
+  getExchanges: () =>
+    api.get('/investments/exchanges'),
+  
+  sync: () =>
+    api.post('/investments/sync'),
+};
+
 // Health check para verificar conectividad
 export const healthCheck = () => api.get('/health');
 
