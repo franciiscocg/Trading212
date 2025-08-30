@@ -437,3 +437,11 @@ class Trading212Service:
         except Exception as e:
             logger.error(f"Error getting exchanges from database: {e}")
             raise
+    
+    def search_available_instruments(self, query: str, limit: int = 50) -> List[Dict]:
+        """Buscar instrumentos disponibles por nombre o ticker"""
+        try:
+            return self.api.search_instruments(query=query, limit=limit)
+        except Exception as e:
+            logger.error(f"Error searching instruments: {e}")
+            raise

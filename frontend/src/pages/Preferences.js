@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { investmentsService } from '../services/api';
-import { formatCurrency } from '../utils/formatters';
 import {
   GlobeAltIcon,
   BuildingOfficeIcon,
@@ -211,22 +210,23 @@ export default function Preferences() {
     return <LoadingSpinner />;
   }
 
-  if (error) {
-    return (
-      <div className="text-center py-12">
-        <GlobeAltIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Error cargando inversiones</h3>
-        <p className="text-red-600 mb-6">{error}</p>
-        <button
-          onClick={debouncedSearchQuery ? () => searchInvestments(debouncedSearchQuery) : loadInvestments}
-          className="btn-primary flex items-center space-x-2 mx-auto"
-        >
-          <RefreshIcon className="h-4 w-4" />
-          <span>Reintentar</span>
-        </button>
-      </div>
-    );
-  }
+  // No mostrar página de error completa, solo un banner de advertencia
+  // if (error) {
+  //   return (
+  //     <div className="text-center py-12">
+  //       <GlobeAltIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+  //       <h3 className="text-lg font-medium text-gray-900 mb-2">Error cargando inversiones</h3>
+  //       <p className="text-red-600 mb-6">{error}</p>
+  //       <button
+  //         onClick={debouncedSearchQuery ? () => searchInvestments(debouncedSearchQuery) : loadInvestments}
+  //         className="btn-primary flex items-center space-x-2 mx-auto"
+  //       >
+  //         <RefreshIcon className="h-4 w-4" />
+  //         <span>Reintentar</span>
+  //       </button>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="space-y-6">
@@ -249,6 +249,37 @@ export default function Preferences() {
           </button>
         </div>
       </div>
+
+      {/* Banner de error sutil si hay problemas */}
+      {error && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                {error}
+              </p>
+            </div>
+            <div className="ml-auto pl-3">
+              <div className="-mx-1.5 -my-1.5">
+                <button
+                  onClick={() => setError(null)}
+                  className="inline-flex bg-yellow-50 rounded-md p-1.5 text-yellow-500 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-yellow-50 focus:ring-yellow-600"
+                >
+                  <span className="sr-only">Cerrar</span>
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filtros y búsqueda */}
       <div className="card">
@@ -336,21 +367,6 @@ export default function Preferences() {
                 >
                   Empresa {sortBy === 'ticker' && (sortOrder === 'asc' ? '↑' : '↓')}
                 </th>
-                <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('current_price_eur')}
-                >
-                  Precio {sortBy === 'current_price_eur' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Exchange
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sector
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  País
-                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -381,25 +397,6 @@ export default function Preferences() {
                         <div className="text-sm text-gray-500">{investment.name}</div>
                       </div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {formatCurrency(investment.current_price_eur)}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {investment.currency} {formatCurrency(investment.current_price)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                      {investment.exchange}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{investment.sector || 'N/A'}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{investment.country || 'N/A'}</div>
                   </td>
                 </tr>
               ))}
