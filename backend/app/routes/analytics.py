@@ -69,43 +69,6 @@ def get_performance_metrics():
         logger.error(f"Error getting performance metrics: {e}")
         return jsonify({'error': str(e)}), 500
 
-@analytics_bp.route('/performance/demo', methods=['GET'])
-def get_demo_performance_metrics():
-    """Obtener métricas de rendimiento de demostración"""
-    try:
-        demo_metrics = {
-            'total_return': 1550.45,
-            'total_return_percent': 10.92,
-            'daily_return': 45.30,
-            'daily_return_percent': 0.29,
-            'total_positions': 15,
-            'winning_positions': 9,
-            'losing_positions': 3,
-            'neutral_positions': 3,
-            'win_rate': 60.0,
-            'largest_gain': 512.50,
-            'largest_loss': -145.20,
-            'avg_position_size': 1050.03,
-            'portfolio_beta': 1.15,
-            'sharpe_ratio': 1.45,
-            'max_drawdown': -8.5,
-            'volatility': 12.8,
-            'performance_chart': [
-                {'date': '2025-05-17', 'value': 14200.00},
-                {'date': '2025-05-24', 'value': 14350.25},
-                {'date': '2025-05-31', 'value': 14680.15},
-                {'date': '2025-06-07', 'value': 15120.80},
-                {'date': '2025-06-14', 'value': 15580.30},
-                {'date': '2025-06-17', 'value': 15750.45}
-            ]
-        }
-        
-        return jsonify(demo_metrics)
-    
-    except Exception as e:
-        logger.error(f"Error getting demo performance metrics: {e}")
-        return jsonify({'error': str(e)}), 500
-
 @analytics_bp.route('/allocation', methods=['GET'])
 def get_allocation_analysis():
     """Análisis de asignación del portafolio"""

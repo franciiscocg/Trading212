@@ -108,6 +108,8 @@ class Trading212Service:
     
     def __init__(self):
         self.api = Trading212API()
+        # Tasa de conversión USD a EUR (aproximada, actualizar según necesidad)
+        self.usd_to_eur_rate = 0.927
     
     def sync_portfolio_data(self, user_id: str = 'default') -> Dict:
         """Sincronizar datos del portafolio desde Trading212"""
@@ -130,8 +132,8 @@ class Trading212Service:
                 current_price = float(position.get('currentPrice', 0) or 0)
                 average_price = float(position.get('averagePrice', 0) or 0)
                 
-                market_value = quantity * current_price
-                cost_basis = quantity * average_price
+                market_value = quantity * current_price * self.usd_to_eur_rate
+                cost_basis = quantity * average_price * self.usd_to_eur_rate
                 unrealized_pnl = market_value - cost_basis
                 unrealized_pnl_pct = (unrealized_pnl / cost_basis * 100) if cost_basis > 0 else 0
                 
@@ -142,18 +144,18 @@ class Trading212Service:
                     'ticker': position.get('ticker', 'UNKNOWN'),
                     'name': position.get('ticker', 'UNKNOWN'),  # Trading212 no siempre proporciona el nombre completo
                     'quantity': quantity,
-                    'avg_cost': average_price,
-                    'current_price': current_price,
+                    'avg_cost': average_price * self.usd_to_eur_rate,
+                    'current_price': current_price * self.usd_to_eur_rate,
                     'market_value': market_value,
                     'cost_basis': cost_basis,
                     'unrealized_pnl': unrealized_pnl,
                     'unrealized_pnl_percent': unrealized_pnl_pct,
-                    'currency': 'USD'  # Asumir USD por defecto
+                    'currency': 'EUR'  # Convertido a EUR
                 })
             
             # Obtener cash balance de forma segura
-            free_cash = float(cash_info.get('free', 0) or 0)
-            blocked_cash = float(cash_info.get('blocked', 0) or 0)
+            free_cash = float(cash_info.get('free', 0) or 0) * self.usd_to_eur_rate
+            blocked_cash = float(cash_info.get('blocked', 0) or 0) * self.usd_to_eur_rate
             cash_balance = free_cash + blocked_cash
             total_portfolio_value = total_value + cash_balance
               # Actualizar o crear portafolio en la base de datos
@@ -187,7 +189,7 @@ class Trading212Service:
                 db.session.add(position)
             
             db.session.commit()
-              # Preparar respuesta
+            # Preparar respuesta
             response_data = {
                 'id': portfolio.id,
                 'user_id': user_id,
