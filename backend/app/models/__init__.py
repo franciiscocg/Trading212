@@ -1,3 +1,4 @@
+from app import db
 from .portfolio import Portfolio
 from .position import Position
 from .transaction import Transaction
