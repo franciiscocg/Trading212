@@ -1,83 +1,140 @@
 # Trading212 Portfolio Manager
 
-Una aplicación completa para gestionar y analizar tu portafolio de Trading212.
+Una aplicación completa para gestionar y analizar tu portafolio de Trading212, potenciada con Inteligencia Artificial para recomendaciones de inversión y análisis de sentimientos.
 
-## 🚀 Instalación Rápida
+## 🚀 Características Principales
 
-### Requisitos Previos
-- **Python 3.8+** - [Descargar aquí](https://www.python.org/downloads/)
-- **Node.js 16+** - [Descargar aquí](https://nodejs.org/)
+### 📊 Gestión de Portafolio
+- **Dashboard en tiempo real**: Resumen de P&L, ROI, y distribución de activos.
+- **Visualización completa**: Lista detallada de posiciones con búsqueda, filtrado y ordenamiento.
+- **Analytics**: Análisis de riesgo, diversificación (HHI) y concentración por sector.
+- **Sincronización**: Actualización automática y manual con tu cuenta de Trading212.
 
-### Instalación Automática
-```cmd
-install.bat
+### 🤖 Investment Advisor (IA)
+- **Recomendaciones Personalizadas**: Sugerencias de inversión basadas en tu perfil de riesgo y preferencias.
+- **Análisis Inteligente**: Utiliza Gemini AI para evaluar oportunidades y riesgos.
+- **Gestión de Riesgo**: Cálculo automático de Stop Loss y precios objetivo.
+- **Sistema Fallback**: Funciona incluso sin API key de Gemini (modo básico).
+
+### 📰 Análisis de Sentimientos
+- **Noticias en Tiempo Real**: Integración con NewsAPI para obtener las últimas noticias financieras.
+- **Análisis Dual**: Evaluación de sentimientos usando Vader y TextBlob.
+- **Scoring**: Puntuación de sentimiento (Positivo/Neutral/Negativo) para cada activo.
+- **Integración**: Los datos de sentimiento se incorporan automáticamente en las recomendaciones.
+
+### 💰 Inversiones Disponibles
+- **Base de Datos Local**: Acceso rápido a todas las inversiones disponibles en Trading212.
+- **Búsqueda Avanzada**: Encuentra activos por nombre, ticker, sector o país.
+- **Información Enriquecida**: Logos de empresas y datos detallados.
+
+---
+
+## 📋 Requisitos Previos
+
+- **Python 3.8+**: [Descargar aquí](https://www.python.org/downloads/)
+- **Node.js 16+**: [Descargar aquí](https://nodejs.org/)
+- **API Key de Trading212**: Necesaria para acceder a tus datos.
+- **API Key de Google Gemini** (Opcional): Para funciones avanzadas de IA.
+- **API Key de NewsAPI** (Opcional): Para análisis de noticias en tiempo real.
+
+---
+
+## 🛠️ Instalación y Configuración
+
+### 1. Instalación Automática
+Ejecuta el script de instalación en PowerShell como Administrador:
+```powershell
+.\install.ps1
 ```
 
-### Configuración
-1. Edita `backend\.env` y añade tu API key de Trading212:
-```env
-TRADING212_API_KEY=tu_api_key_aqui
+### 2. Configuración de API Keys
+
+#### Trading212 API Key (Requerido)
+1. Inicia sesión en [Trading212](https://www.trading212.com).
+2. Ve a **Settings** -> **API**.
+3. Genera una nueva API Key con permisos de **LECTURA** (Account Information, Portfolio, Orders History). **NO habilites permisos de Trading**.
+4. Añádela al archivo `backend/.env`:
+   ```env
+   TRADING212_API_KEY=tu_api_key_aqui
+   ```
+
+#### Gemini AI API Key (Opcional - Recomendado)
+1. Visita [Google AI Studio](https://aistudio.google.com/).
+2. Crea una API Key.
+3. Añádela al archivo `backend/.env`:
+   ```env
+   GEMINI_API_KEY=tu_api_key_aqui
+   ```
+
+#### NewsAPI Key (Opcional)
+1. Regístrate en [NewsAPI](https://newsapi.org/).
+2. Obtén tu API Key.
+3. Añádela al archivo `backend/.env`:
+   ```env
+   NEWS_API_KEY=tu_api_key_aqui
+   ```
+
+### 3. Poblar Base de Datos (Inicial)
+Para tener la lista completa de inversiones disponibles:
+```powershell
+.\populate_db.bat
 ```
 
-### Ejecutar Aplicación
-```cmd
-:: Backend (en una ventana)
-start_backend.bat
+---
 
-:: Frontend (en otra ventana)  
-start_frontend.bat
+## 🏃‍♂️ Ejecución
+
+### Opción 1: Script Automático
+Inicia tanto el backend como el frontend con un solo comando:
+```powershell
+.\start.ps1
 ```
 
-### Acceder a la Aplicación
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5000
+### Opción 2: Manual
+**Terminal 1 (Backend):**
+```powershell
+.\start_backend.bat
+```
+**Terminal 2 (Frontend):**
+```powershell
+.\start_frontend.bat
+```
 
-## 📊 Características
+### Acceso
+- **Frontend (App)**: http://localhost:3000
+- **Backend (API)**: http://localhost:5000
+
+---
+
+## 📖 Guía de Uso
 
 ### Dashboard
-- ✅ Resumen del portafolio en tiempo real
-- ✅ Métricas de rendimiento (P&L, ROI)
-- ✅ Gráficos de distribución de activos
-- ✅ Top posiciones ganadoras/perdedoras
+Vista general de tu cuenta. Sincroniza tus datos aquí para ver el estado actual de tu portafolio.
 
-### Portafolio
-- ✅ Vista completa de todas las posiciones
-- ✅ Búsqueda y filtrado avanzado
-- ✅ Ordenamiento por columnas
-- ✅ Detalles de P&L por posición
+### Investment Advisor
+1. Ve a la sección "Investment Advisor".
+2. Configura tus preferencias (Monto, Riesgo, Horizonte temporal, Sectores).
+3. Recibe recomendaciones detalladas generadas por IA.
 
-### Analytics
-- ✅ Análisis de riesgo del portafolio
-- ✅ Métricas de diversificación (HHI)
-- ✅ Concentración por sector
-- ✅ Recomendaciones automáticas de mejora
+### Análisis de Sentimientos
+El análisis se ejecuta automáticamente al solicitar recomendaciones. Puedes ver el "Score de Sentimiento" en los detalles de cada activo recomendado.
 
-### Configuración
-- ✅ Gestión segura de API Key
-- ✅ Estado de conexión con Trading212
-- ✅ Sincronización manual de datos
+---
 
 ## 🔧 Solución de Problemas
 
-### Error de Instalación
-```cmd
-fix_installation.bat
-```
+### Error "GEMINI_API_KEY no está configurada"
+- Verifica el archivo `.env`.
+- Si no deseas usar Gemini, la aplicación usará el modo fallback automáticamente.
 
-### Python no encontrado
-- Instala Python desde python.org
-- Marca "Add to PATH" durante la instalación
+### Error "429 Too Many Requests" (Trading212)
+- Has excedido el límite de 60 solicitudes por minuto. Espera unos minutos antes de volver a sincronizar.
 
-### Node.js no encontrado
-- Instala Node.js desde nodejs.org
-- Reinicia la terminal después de la instalación
+### Frontend/Backend no inician
+- Ejecuta `fix_installation.bat` para reparar dependencias.
+- Asegúrate de que los puertos 3000 y 5000 estén libres.
 
-## � Obtener API Key de Trading212
-
-1. Inicia sesión en Trading212
-2. Ve a **Configuración** → **API**
-3. Genera nueva API key con permisos de **lectura**
-4. Copia la key y pégala en `backend\.env`
+---
 
 ## 🏗️ Estructura del Proyecto
 
@@ -85,59 +142,37 @@ fix_installation.bat
 Trading212/
 ├── backend/              # API Python/Flask
 │   ├── app/
-│   │   ├── models/       # Modelos de base de datos
-│   │   ├── routes/       # Endpoints de la API
-│   │   ├── services/     # Integración Trading212
+│   │   ├── models/       # Modelos SQLAlchemy
+│   │   ├── routes/       # Endpoints API
+│   │   ├── services/     # Lógica de negocio (IA, Trading212, News)
 │   │   └── utils/        # Utilidades
-│   ├── requirements.txt  # Dependencias Python
-│   └── run.py           # Servidor Flask
-├── frontend/            # Aplicación React
+│   ├── sentiment_analyzer.py # Motor de análisis de sentimientos
+│   └── run.py            # Punto de entrada
+├── frontend/             # App React
 │   ├── src/
-│   │   ├── components/  # Componentes React
-│   │   ├── pages/       # Páginas principales
-│   │   ├── services/    # Cliente API
-│   │   └── utils/       # Utilidades frontend
-│   └── package.json     # Dependencias Node
-├── install.bat          # Instalación automática
-├── start_backend.bat    # Ejecutar backend
-├── start_frontend.bat   # Ejecutar frontend
-└── README.md
+│   │   ├── components/   # Componentes UI
+│   │   ├── pages/        # Vistas principales
+│   │   └── services/     # Comunicación con API
+└── scripts/              # Scripts de instalación y ejecución (.bat, .ps1)
 ```
 
-## 🛠️ Tecnologías
-
-### Backend
-- **Flask** - Framework web
-- **SQLAlchemy** - ORM base de datos  
-- **Pandas** - Análisis de datos
-- **Requests** - Cliente HTTP
-- **SQLite** - Base de datos
-
-### Frontend
-- **React 18** - Biblioteca UI
-- **Tailwind CSS** - Framework CSS
-- **Recharts** - Gráficos
-- **Axios** - Cliente HTTP
-- **React Router** - Navegación
-
-## 📈 API Endpoints
-
-- `GET /api/portfolio` - Datos del portafolio
-- `POST /api/portfolio/sync` - Sincronizar con Trading212
-- `GET /api/positions` - Todas las posiciones
-- `GET /api/analytics/performance` - Métricas de rendimiento
-- `GET /api/analytics/risk` - Análisis de riesgo
+---
 
 ## 🔒 Seguridad
 
-- ✅ API Key almacenada localmente
-- ✅ Solo permisos de lectura requeridos
-- ✅ CORS configurado para localhost
-- ✅ Validación de entrada en API
+- **Datos Locales**: Toda la información y API Keys se almacenan localmente en tu equipo.
+- **Permisos de Lectura**: La aplicación solo requiere permisos de lectura en Trading212. Nunca habilites permisos de ejecución de órdenes.
+- **Sin Servidores Externos**: Tus datos financieros no se envían a servidores de terceros (excepto las consultas anónimas a Gemini/NewsAPI si están activadas).
 
-## 📝 Notas Importantes
+---
 
-- Esta aplicación es **solo para análisis**, no ejecuta trades
-- Los datos se actualizan cuando sincronizas manualmente
-- Todos los datos se almacenan en tu computadora
-- La API key nunca se envía a servidores externos
+## 🔮 Mejoras Futuras
+
+- [ ] Backtesting de estrategias de inversión.
+- [ ] Alertas de precio automáticas.
+- [ ] Optimización automática de portafolio (Markowitz).
+- [ ] Integración con más fuentes de datos financieros.
+- [ ] Exportación de reportes en PDF/Excel.
+
+---
+**Desarrollado con ❤️ usando Python, Flask, React y Tailwind CSS**
