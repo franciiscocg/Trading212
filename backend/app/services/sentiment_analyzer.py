@@ -21,7 +21,7 @@ from typing import Dict, List, Optional, Tuple
 import logging
 from datetime import datetime, timedelta
 import os
-import pickle
+from flask import current_app
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -32,16 +32,24 @@ class SentimentAnalyzer:
     Clase para analizar sentimientos de noticias de empresas
     """
 
-    def __init__(self, api_key: str = "9aa1f53dc57b4c089b10831589eb3289", use_newsapi: bool = True):
+    def __init__(self, api_key: str = None, use_newsapi: bool = True):
         """
         Inicializar el analizador de sentimientos
 
         Args:
-            api_key: API key de NewsAPI
+            api_key: API key de NewsAPI (opcional, toma de config si es None)
             use_newsapi: Si True, usa NewsAPI (recomendado)
         """
         self.use_newsapi = use_newsapi
-        self.api_key = api_key
+        
+        # Intentar obtener API key de la app context si es posible, sino usar argumento o env
+        if api_key:
+            self.api_key = api_key
+        else:
+            try:
+                self.api_key = current_app.config.get('NEWS_API_KEY')
+            except:
+                self.api_key = os.getenv('NEWS_API_KEY')
 
         if use_newsapi:
             self.base_url = "https://newsapi.org/v2/everything"
@@ -56,9 +64,18 @@ class SentimentAnalyzer:
         })
 
         # Sistema de rate limiting y cache
-        self.daily_request_limit = 100  # NewsAPI limit
-        self.cache_file = os.path.join(os.path.dirname(__file__), 'sentiment_cache.pkl')
-        self.request_count_file = os.path.join(os.path.dirname(__file__), 'request_count.pkl')
+        try:
+            self.daily_request_limit = current_app.config.get('SENTIMENT_REQUEST_LIMIT', 100)
+            cache_dir = current_app.config.get('SENTIMENT_CACHE_DIR', 'cache')
+        except:
+            self.daily_request_limit = 100
+            cache_dir = 'cache'
+            
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir)
+            
+        self.cache_file = os.path.join(cache_dir, 'sentiment_cache.json')
+        self.request_count_file = os.path.join(cache_dir, 'request_count.json')
 
         # Cargar estado de rate limiting
         self.request_count = self._load_request_count()
@@ -83,31 +100,32 @@ class SentimentAnalyzer:
             logger.warning("❌ No se pudo cargar textblob. Instala con: pip install textblob")
 
         if not self.vader_analyzer and not self.textblob_analyzer:
-            raise ImportError("Se requiere al menos una librería de análisis de sentimientos (vaderSentiment o textblob)")
+            # No levantar error aquí para permitir funcionamiento básico sin librerías
+            logger.warning("⚠️ No hay librerías de análisis de sentimiento disponibles. Se usarán valores neutros.")
 
     def _load_request_count(self) -> Dict:
         """Cargar contador de requests del día"""
         try:
             if os.path.exists(self.request_count_file):
-                with open(self.request_count_file, 'rb') as f:
-                    data = pickle.load(f)
+                with open(self.request_count_file, 'r') as f:
+                    data = json.load(f)
                     # Verificar si es del día actual
-                    if data.get('date') == datetime.now().date():
+                    if data.get('date') == str(datetime.now().date()):
                         return data
         except Exception as e:
             logger.warning(f"Error al cargar contador de requests: {e}")
 
         # Retornar valores por defecto
         return {
-            'date': datetime.now().date(),
+            'date': str(datetime.now().date()),
             'count': 0
         }
 
     def _save_request_count(self):
         """Guardar contador de requests"""
         try:
-            with open(self.request_count_file, 'wb') as f:
-                pickle.dump(self.request_count, f)
+            with open(self.request_count_file, 'w') as f:
+                json.dump(self.request_count, f)
         except Exception as e:
             logger.warning(f"Error al guardar contador de requests: {e}")
 
@@ -115,8 +133,8 @@ class SentimentAnalyzer:
         """Cargar cache de resultados"""
         try:
             if os.path.exists(self.cache_file):
-                with open(self.cache_file, 'rb') as f:
-                    return pickle.load(f)
+                with open(self.cache_file, 'r') as f:
+                    return json.load(f)
         except Exception as e:
             logger.warning(f"Error al cargar cache: {e}")
         return {}
@@ -124,17 +142,17 @@ class SentimentAnalyzer:
     def _save_cache(self):
         """Guardar cache de resultados"""
         try:
-            with open(self.cache_file, 'wb') as f:
-                pickle.dump(self.cache, f)
+            with open(self.cache_file, 'w') as f:
+                json.dump(self.cache, f)
         except Exception as e:
             logger.warning(f"Error al guardar cache: {e}")
 
     def _can_make_request(self) -> bool:
         """Verificar si se puede hacer una request"""
         # Resetear contador si es un nuevo día
-        if self.request_count['date'] != datetime.now().date():
+        if self.request_count['date'] != str(datetime.now().date()):
             self.request_count = {
-                'date': datetime.now().date(),
+                'date': str(datetime.now().date()),
                 'count': 0
             }
             self._save_request_count()

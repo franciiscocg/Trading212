@@ -13,16 +13,16 @@ db = SQLAlchemy()
 def create_app():
     app = Flask(__name__)
     
-    # Configuración
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///trading212.db')
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    # Cargar configuración
+    env = os.getenv('FLASK_ENV', 'default')
+    from config import config
+    app.config.from_object(config[env])
     
     # Inicializar extensiones
     db.init_app(app)
     
     # Configurar CORS
-    CORS(app, origins=os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(','))
+    CORS(app, origins=app.config['CORS_ORIGINS'])
       # Registrar blueprints
     from app.routes.portfolio import portfolio_bp
     from app.routes.positions import positions_bp

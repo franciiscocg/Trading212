@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from app.models import Portfolio, Position, Transaction, db
+from app.models import Portfolio, Position, Transaction
+from app import db
 from datetime import datetime, timedelta
 import pandas as pd
 import json

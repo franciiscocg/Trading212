@@ -246,10 +246,7 @@ def analyze_sentiment():
         
         # Importar el analizador de sentimientos
         try:
-            import sys
-            import os
-            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            from sentiment_analyzer import SentimentAnalyzer
+            from app.services.sentiment_analyzer import SentimentAnalyzer
         except ImportError as e:
             logger.error(f"Error importando SentimentAnalyzer: {e}")
             return jsonify({
@@ -292,10 +289,7 @@ def get_sentiment_for_symbol(symbol):
         
         # Importar el analizador de sentimientos
         try:
-            import sys
-            import os
-            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            from sentiment_analyzer import SentimentAnalyzer
+            from app.services.sentiment_analyzer import SentimentAnalyzer
         except ImportError as e:
             logger.error(f"Error importando SentimentAnalyzer")
             return jsonify({

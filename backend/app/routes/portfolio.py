@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.services.trading212_service import Trading212Service
-from app.models import Portfolio, Position, db
+from app.models import Portfolio, Position
+from app import db
 import logging
 
 logger = logging.getLogger(__name__)

@@ -3,16 +3,15 @@ import logging
 import json
 import os
 from datetime import datetime
-from app.models import Portfolio, Position, db
+from app.models import Portfolio, Position
+from app import db
 import google.generativeai as genai
 import yfinance as yf
 import time
 import sys
 import os
 
-# Agregar el directorio padre al path para importar sentiment_analyzer
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from sentiment_analyzer import SentimentAnalyzer
+from app.services.sentiment_analyzer import SentimentAnalyzer
 
 logger = logging.getLogger(__name__)
 investment_advisor_bp = Blueprint('investment_advisor', __name__)

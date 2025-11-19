@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from app.models import Position, Portfolio, db
+from app.models import Position, Portfolio
+from app import db
 import logging
 
 logger = logging.getLogger(__name__)
