@@ -6,6 +6,7 @@ import Portfolio from './pages/Portfolio';
 import Investments from './pages/Investments';
 import Analytics from './pages/Analytics';
 import InvestmentAdvisor from './pages/InvestmentAdvisor';
+import WinningStrategy from './pages/WinningStrategy';
 import Preferences from './pages/Preferences';
 import Settings from './pages/Settings';
 
@@ -19,6 +20,7 @@ function App() {
             <Route path="/investments" element={<Investments />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/investment-advisor" element={<InvestmentAdvisor />} />
+            <Route path="/winning-strategy" element={<WinningStrategy />} />
             <Route path="/preferences" element={<Preferences />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>

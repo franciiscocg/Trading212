@@ -9,7 +9,8 @@ import {
   Bars3Icon,
   XMarkIcon,
   GlobeAltIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  ArrowTrendingUpIcon
 } from '../utils/icons';
 
 const navigation = [
@@ -18,6 +19,7 @@ const navigation = [
   { name: 'Inversiones', href: '/investments', icon: MagnifyingGlassIcon },
   { name: 'Analytics', href: '/analytics', icon: DocumentChartBarIcon },
   { name: 'Investment Advisor', href: '/investment-advisor', icon: LightBulbIcon },
+  { name: 'Estrategia Ganadora', href: '/winning-strategy', icon: ArrowTrendingUpIcon },
   { name: 'Mis Preferencias', href: '/preferences', icon: GlobeAltIcon },
   { name: 'Configuración', href: '/settings', icon: CogIcon },
 ];

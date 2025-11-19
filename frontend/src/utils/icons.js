@@ -24,7 +24,9 @@ import {
   CurrencyDollarIcon,
   MapPinIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  ClockIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 
 // Exportar iconos con nombres consistentes
@@ -32,6 +34,7 @@ export {
   ArrowUpIcon,
   ArrowDownIcon,
   ArrowTrendingUpIcon as TrendingUpIcon, // Alias para compatibilidad
+  ArrowTrendingUpIcon,
   ArrowPathIcon,
   CurrencyEuroIcon,
   ChartBarIcon,
@@ -54,5 +57,7 @@ export {
   MapPinIcon,
   ArrowPathIcon as RefreshIcon, // Alias para refresh
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  ClockIcon,
+  InformationCircleIcon
 };

@@ -140,6 +140,39 @@ export const investmentsService = {
     api.get(`/investments/sentiment-analysis/${symbol}?news_limit=${newsLimit}`),
 };
 
+// Servicios de Estrategia (Winning Strategy)
+export const strategyService = {
+  generate: (params = {}) =>
+    api.post('/strategy/generate', {
+      user_id: params.user_id || 'default',
+      timeframe_weeks: params.timeframe_weeks || 2,
+      risk_tolerance: params.risk_tolerance || 'MODERATE'
+    }),
+  
+  getHistory: (userId = 'default', status = null, limit = 10) => {
+    const queryParams = new URLSearchParams({ user_id: userId, limit });
+    if (status) queryParams.append('status', status);
+    return api.get(`/strategy/history?${queryParams.toString()}`);
+  },
+  
+  getStrategy: (strategyId) =>
+    api.get(`/strategy/${strategyId}`),
+  
+  updateStatus: (strategyId, status, actualPerformance = null) => {
+    const payload = { status };
+    if (actualPerformance) {
+      payload.actual_performance = actualPerformance;
+    }
+    return api.patch(`/strategy/${strategyId}`, payload);
+  },
+  
+  getActive: (userId = 'default') =>
+    api.get(`/strategy/active?user_id=${userId}`),
+  
+  getStats: (userId = 'default') =>
+    api.get(`/strategy/stats?user_id=${userId}`),
+};
+
 // Health check para verificar conectividad
 export const healthCheck = () => api.get('/health');
 

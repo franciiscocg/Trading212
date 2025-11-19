@@ -44,6 +44,7 @@ def create_app():
     from app.routes.auth import auth_bp
     from app.routes.investment_advisor import investment_advisor_bp
     from app.routes.investments import investments_bp
+    from app.routes.strategy import strategy_bp
     
     app.register_blueprint(portfolio_bp, url_prefix='/api/portfolio')
     app.register_blueprint(positions_bp, url_prefix='/api/positions')
@@ -51,6 +52,7 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(investment_advisor_bp, url_prefix='/api/investment-advisor')
     app.register_blueprint(investments_bp, url_prefix='/api/investments')
+    app.register_blueprint(strategy_bp, url_prefix='/api/strategy')
     
     # Health check route
     @app.route('/api/health', methods=['GET'])

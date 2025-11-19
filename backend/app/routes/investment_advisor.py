@@ -36,65 +36,55 @@ def get_gemini_api_key():
     return os.getenv('GEMINI_API_KEY')
 
 def call_gemini_api(prompt):
-    """Llamar a la API de Gemini 2.5 Pro usando la nueva librería google-genai con streaming"""
+    """Llamar a la API de Gemini usando google-generativeai"""
     api_key = get_gemini_api_key()
     if not api_key:
         raise Exception("GEMINI_API_KEY no está configurada")
     
     try:
-        # Configurar cliente de Gemini
         genai.configure(api_key=api_key)
-          # Configurar el modelo con thinking y respuesta estructurada
-        model = genai.GenerativeModel(
-            model_name="gemini-2.0-flash-thinking-exp",  # Usando el modelo más avanzado disponible
-            generation_config={
-                "response_mime_type": "application/json",
-                "temperature": 0.7,
-                "top_p": 0.9,
-            }
-        )
         
-        logger.info("Iniciando análisis con Gemini 2.0 Flash Thinking Exp")
-        logger.info(f"Prompt length: {len(prompt)} caracteres")
+        # Lista de modelos a intentar
+        models_to_try = ["models/gemini-2.5-flash", "models/gemini-2.0-flash", "models/gemini-2.5-pro"]
         
-        # Generar contenido usando streaming para mejor rendimiento
-        response_chunks = []
+        for model_name in models_to_try:
+            try:
+                logger.info(f"Iniciando análisis con {model_name}")
+                logger.info(f"Prompt length: {len(prompt)} caracteres")
+                
+                model = genai.GenerativeModel(
+                    model_name=model_name,
+                    generation_config={
+                        "temperature": 0.7,
+                        "top_p": 0.9,
+                        "response_mime_type": "application/json"
+                    }
+                )
+                
+                response = model.generate_content(prompt)
+                
+                full_response = response.text if response and response.text else ""
+                
+                if not full_response.strip():
+                    raise Exception("No se recibió respuesta válida de Gemini")
+                    
+                logger.info(f"Respuesta recibida de {model_name}: {len(full_response)} caracteres")
+                return full_response
+                
+            except Exception as e:
+                logger.warning(f"Error con {model_name}: {e}")
+                if "429" in str(e) or "quota" in str(e).lower():
+                    continue
+                elif "404" in str(e) or "not found" in str(e).lower():
+                    continue
+                else:
+                    continue
         
-        for chunk in model.generate_content(prompt, stream=True):
-            if chunk.text:
-                response_chunks.append(chunk.text)
-        
-        # Combinar todos los chunks en una respuesta completa
-        full_response = ''.join(response_chunks)
-        
-        if not full_response.strip():
-            raise Exception("No se recibió respuesta válida de Gemini")
-            
-        logger.info(f"Respuesta recibida de Gemini: {len(full_response)} caracteres")
-        return full_response
+        # Si todos fallan, lanzar excepción
+        raise Exception("Todos los modelos de Gemini fallaron")
         
     except Exception as e:
         logger.error(f"Error calling Gemini API: {e}")
-        
-        # Fallback a modelos alternativos si el principal falla
-        try:
-            logger.info("Intentando fallback con gemini-2.5-pro")
-            model_fallback = genai.GenerativeModel(
-                model_name="gemini-2.5-pro",
-                generation_config={
-                    "response_mime_type": "application/json",
-                    "temperature": 0.7,
-                }
-            )
-            
-            response = model_fallback.generate_content(prompt)
-            if response and response.text:
-                logger.info("Fallback exitoso con gemini-2.5-pro")
-                return response.text
-                
-        except Exception as fallback_error:
-            logger.error(f"Fallback también falló: {fallback_error}")
-        
         raise Exception(f"Error comunicándose con Gemini API: {str(e)}")
 
 def get_portfolio_summary(user_id):
