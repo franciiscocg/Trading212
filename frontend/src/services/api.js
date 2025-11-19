@@ -15,7 +15,35 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', error);
+    // Logging mejorado de errores
+    if (error.response) {
+      // El servidor respondió con un código de error
+      console.error('API Error Response:', {
+        status: error.response.status,
+        data: error.response.data,
+        endpoint: error.config?.url
+      });
+      
+      // Mejorar mensajes de error para el usuario
+      if (error.response.status === 429) {
+        error.userMessage = 'Trading212 API rate limit alcanzado. Por favor espera unos minutos.';
+      } else if (error.response.status === 401) {
+        error.userMessage = 'API key inválida. Verifica tu configuración en Settings.';
+      } else if (error.response.status === 500) {
+        error.userMessage = error.response.data?.error || 'Error del servidor. Por favor intenta nuevamente.';
+      } else if (error.response.status === 404) {
+        error.userMessage = 'No se encontraron datos. Sincroniza tu portafolio primero.';
+      }
+    } else if (error.request) {
+      // La petición se hizo pero no hubo respuesta
+      console.error('API No Response:', error.message);
+      error.userMessage = 'No se pudo conectar con el servidor. Verifica que el backend esté corriendo.';
+    } else {
+      // Error al configurar la petición
+      console.error('API Request Error:', error.message);
+      error.userMessage = 'Error configurando la petición: ' + error.message;
+    }
+    
     return Promise.reject(error);
   }
 );

@@ -38,11 +38,12 @@ export default function Dashboard() {
     } catch (err) {
       console.error('Dashboard error:', err);
       
-      if (err.response?.status === 404) {
-        setError('No se encontraron datos del portafolio. Necesitas sincronizar tus datos de Trading212 primero.');
-      } else {
-        setError('Error cargando datos del dashboard. Verifica tu conexión y configuración.');
-      }
+      // Usar mensajes de error mejorados del interceptor
+      const errorMessage = err.userMessage || 
+                          err.response?.data?.error || 
+                          'Error cargando datos del dashboard. Verifica tu conexión y configuración.';
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -63,13 +64,12 @@ export default function Dashboard() {
     } catch (err) {
       console.error('Sync error:', err);
       
-      if (err.response?.data?.error?.includes('rate limit')) {
-        setError('Trading212 API rate limit alcanzado. Espera unos minutos antes de sincronizar de nuevo.');
-      } else if (err.response?.status === 500) {
-        setError('Error al conectar con Trading212. Verifica tu API key en Settings.');
-      } else {
-        setError('Error sincronizando datos. Verifica tu configuración.');
-      }
+      // Usar mensajes de error mejorados del interceptor
+      const errorMessage = err.userMessage || 
+                          err.response?.data?.error || 
+                          'Error sincronizando datos. Verifica tu configuración.';
+      
+      setError(errorMessage);
       setLoading(false);
     }
   };

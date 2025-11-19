@@ -3,6 +3,14 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import os
+import logging
+
+# Configurar logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Cargar variables de entorno
 load_dotenv()
@@ -17,6 +25,12 @@ def create_app():
     env = os.getenv('FLASK_ENV', 'default')
     from config import config
     app.config.from_object(config[env])
+    
+    # Validar configuración
+    try:
+        config[env].validate_config()
+    except Exception as e:
+        logger.error(f"Error validando configuración: {e}")
     
     # Inicializar extensiones
     db.init_app(app)
